@@ -271,46 +271,45 @@ class word_graph:
         tuples.
         """     
 
-        # Iteratively add each sentence in the graph ---------------------------
+        # 逐个添加句子
         for i in range(self.length):
 
             # Compute the sentence length
             sentence_len = len(self.sentence[i])
 
-            # Create the mapping container
+            # Create the mapping container, 用sentence_len个0填充
             mapping = [0] * sentence_len
 
             #-------------------------------------------------------------------
             # 1. non-stopwords for which no candidate exists in the graph or for 
-            #    which an unambiguous mapping is possible or which occur more 
-            #    than once in the sentence.
+            #    which an unambiguous（清晰的、明确的） mapping is possible or which
+            #    occur more than once in the sentence.
             #-------------------------------------------------------------------
             for j in range(sentence_len):
 
                 # Get the word and tag
                 token, POS = self.sentence[i][j]
 
-                # If stopword or punctuation mark, continues
+                # 如果是停用词或者标点，则跳过
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
             
                 # Create the node identifier
                 node = token.lower() + self.sep + POS
 
-                # Find the number of ambiguous nodes in the graph
+                # 计算途中可能的候选结点的个数
                 k = self.ambiguous_nodes(node)
 
-                # If there is no node in the graph, create one with id = 0
+                # 如果图中没有结点，则新建一个结点，令id为0
                 if k == 0:
 
                     # Add the node in the graph
-                    self.graph.add_node( (node, 0), info=[(i, j)],
-                                         label=token.lower() )
+                    self.graph.add_node((node, 0), info=[(i, j)], label=token.lower())
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
 
-                # If there is only one matching node in the graph (id is 0)
+                # 只有一个匹配的结点（即id为0的结点）
                 elif k == 1:
 
                     # Get the sentences id of this node
@@ -325,8 +324,7 @@ class word_graph:
 
                     # Else Create new node for redundant word
                     else:
-                        self.graph.add_node( (node, 1), info=[(i, j)], 
-                                             label=token.lower() )
+                        self.graph.add_node((node, 1), info=[(i, j)], label=token.lower())
                         mapping[j] = (node, 1)
 
             #-------------------------------------------------------------------
@@ -349,15 +347,15 @@ class word_graph:
                     node = token.lower() + self.sep + POS
                     
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]
-                    next_token, next_POS = self.sentence[i][j+1]
+                    prev_token, prev_POS = self.sentence[i][j-1]  # 前一个词的word和pos
+                    next_token, next_POS = self.sentence[i][j+1]  # 后一个词的word和pos
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
                     
                     # Find the number of ambiguous nodes in the graph
                     k = self.ambiguous_nodes(node)
 
-                    # Search for the ambiguous node with the larger overlap in
+                    # Search for the ambiguous node with the larger overlap（重叠） in
                     # context or the greater frequency.
                     ambinode_overlap = []
                     ambinode_frequency = []
@@ -365,8 +363,10 @@ class word_graph:
                     # For each ambiguous node
                     for l in range(k):
 
-                        # Get the immediate context words of the nodes
+                        # 获取结点的上文
                         l_context = self.get_directed_context(node, l, 'left')
+
+                        # 获取结点的下文
                         r_context = self.get_directed_context(node, l, 'right')
                         
                         # Compute the (directed) context sum
@@ -377,9 +377,7 @@ class word_graph:
                         ambinode_overlap.append(val)
 
                         # Add the frequency of the ambiguous node
-                        ambinode_frequency.append(
-                            len( self.graph.node[(node, l)]['info'] )
-                        )
+                        ambinode_frequency.append(len(self.graph.node[(node, l)]['info']))
                 
                     # Search for the best candidate while avoiding a loop
                     found = False
@@ -417,8 +415,7 @@ class word_graph:
 
                     # Else create new node for redundant word
                     else:
-                        self.graph.add_node( (node, k), info=[(i, j)], 
-                                             label=token.lower() )
+                        self.graph.add_node((node, k), info=[(i, j)], label=token.lower())
                         mapping[j] = (node, k)
             
             #-------------------------------------------------------------------
@@ -443,8 +440,7 @@ class word_graph:
                 if k == 0:
 
                     # Add the node in the graph
-                    self.graph.add_node( (node, 0), info=[(i, j)], 
-                                         label=token.lower() )
+                    self.graph.add_node((node, 0), info=[(i, j)], label=token.lower())
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
@@ -465,10 +461,8 @@ class word_graph:
 
                         # Get the immediate context words of the nodes, the
                         # boolean indicates to consider only non stopwords
-                        l_context = self.get_directed_context(node, l, 'left',\
-                                    True)
-                        r_context = self.get_directed_context(node, l, 'right',\
-                                    True)
+                        l_context = self.get_directed_context(node, l, 'left', True)
+                        r_context = self.get_directed_context(node, l, 'right', True)
                         
                         # Compute the (directed) context sum
                         val = l_context.count(prev_node) 
@@ -581,8 +575,7 @@ class word_graph:
                     # Else create a new node
                     else:
                         # Add the node in the graph
-                        self.graph.add_node( (node, k), info=[(i, j)], 
-                                             label=token.lower() )
+                        self.graph.add_node((node, k), info=[(i, j)], label=token.lower())
 
                         # Mark the word as mapped to k
                         mapping[j] = (node, k)
@@ -635,29 +628,31 @@ class word_graph:
 
         # For all the sentence/position tuples
         for sid, off in self.graph.node[(node, k)]['info']:
-            
-            prev = self.sentence[sid][off-1][0].lower() + self.sep +\
-                   self.sentence[sid][off-1][1]
-                   
-            next = self.sentence[sid][off+1][0].lower() + self.sep +\
-                   self.sentence[sid][off+1][1]
-                   
+
+            # word/pos
+
+            prev = self.sentence[sid][off-1][0].lower() + self.sep + self.sentence[sid][off-1][1]
+
+            next = self.sentence[sid][off+1][0].lower() + self.sep + self.sentence[sid][off+1][1]
+
             if non_pos:
+                # 忽略停用词
                 if self.sentence[sid][off-1][0] not in self.stopwords:
                     l_context.append(prev)
                 if self.sentence[sid][off+1][0] not in self.stopwords:
                     r_context.append(next)
             else:
+                # 考虑停用词
                 l_context.append(prev)
                 r_context.append(next)
 
-        # Returns the left (previous) context
+        # 返回上文
         if dir == 'left':
             return l_context
-        # Returns the right (next) context
+        # 返回下文
         elif dir == 'right':
             return r_context
-        # Returns the whole context
+        # 返回上下文
         else:
             l_context.extend(r_context)
             return l_context
