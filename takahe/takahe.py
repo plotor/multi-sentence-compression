@@ -176,8 +176,7 @@ class word_graph:
         self.term_freq = {}
         """ The frequency of a given term. """
         
-        self.verbs = set(['VB', 'VBD', 'VBP', 'VBZ', 'VH', 'VHD', 'VHP', 'VBZ', 
-        'VV', 'VVD', 'VVP', 'VVZ'])
+        self.verbs = set(['VB', 'VBD', 'VBP', 'VBZ', 'VH', 'VHD', 'VHP', 'VBZ', 'VV', 'VVD', 'VVP', 'VVZ'])
         """
         The list of verb POS tags required in the compression. At least *one* 
         verb must occur in the candidate compressions.
@@ -187,10 +186,10 @@ class word_graph:
         if lang == "fr":
             self.verbs = set(['V', 'VPP', 'VINF'])
 
-        # 1. Pre-process the sentences
+        # 1. 预处理，将句子中的word/pos，按照空格切分成（word, pos）
         self.pre_process_sentences()
 
-        # 2. Compute term statistics
+        # 2. 统计每个词的词频
         self.compute_statistics()
 
         # 3. Build the word graph
@@ -207,33 +206,30 @@ class word_graph:
 
         for i in range(self.length):
         
-            # Normalise extra white spaces
+            # 将句子中的空格统一化，然后去除每个词的首尾空格
             self.sentence[i] = re.sub(' +', ' ', self.sentence[i])
-            self.sentence[i] = self.sentence[i].strip()
+            self.sentence[i] = self.sentence[i].strip()  # 类似java中的trim
             
-            # Tokenize the current sentence in word/POS
+            # 按空格切分成词word/POS
             sentence = self.sentence[i].split(' ')
 
-            # Creating an empty container for the cleaned up sentence
+            # 创建一个空的词容器（word, pos）
             container = [(self.start, self.start)]
 
-            # Looping over the words
+            # 循环处理句子中的每个词
             for w in sentence:
                 
-                # Splitting word, POS
+                # 将每个词的word和pos分离
                 pos_separator_re = re.escape(self.pos_separator)
-                m = re.match("^(.+)" +pos_separator_re +"(.+)$", w)
-                
-                # Extract the word information
+                m = re.match("^(.+)" + pos_separator_re + "(.+)$", w)
                 token, POS = m.group(1), m.group(2)
 
-                # Add the token/POS to the sentence container
+                # 循环添加词
                 container.append((token.lower(), POS))
                     
-            # Add the stop token at the end of the container
+            # 添加尾结点
             container.append((self.stop, self.stop))
 
-            # Recopy the container into the current sentence
             self.sentence[i] = container
     #-B-----------------------------------------------------------------------B-
     
@@ -938,25 +934,24 @@ class word_graph:
         # Structure for containing the list of sentences in which a term occurs
         terms = {}
 
-        # Loop over the sentences
+        # 遍历sentences
         for i in range(self.length):
         
-            # For each tuple (token, POS) of sentence i
+            # 依次处理句子中的(word, pos)
             for token, POS in self.sentence[i]:
             
                 # generate the word/POS token
-                node = token.lower() + self.sep + POS
+                node = token.lower() + self.sep + POS  # node = word/-/pos
                 
-                # Add the token to the terms list
+                # 以word/-/pos为key，词的编号为value，一个key可以对应多个value，value中的元素不去重，方便后续的词频统计
                 if not terms.has_key(node):
                     terms[node] = [i]
                 else:
                     terms[node].append(i)
 
-        # Loop over the terms
+        # 遍历处理terms中的keys
         for w in terms:
-
-            # Compute the term frequency
+            # 统计每个词的词频
             self.term_freq[w] = len(terms[w])
     #-B-----------------------------------------------------------------------B-
 
