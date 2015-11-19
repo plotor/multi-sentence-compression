@@ -1,7 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import takahe
+import sys
+import os
+import panda
 
 def protogenesis_msc(sentences, output_sent_num = 50):
 
@@ -14,7 +16,7 @@ def protogenesis_msc(sentences, output_sent_num = 50):
 
     # 构建词图，并执行压缩
     # 忽略词数小于8的句子
-    compresser = takahe.word_graph(sentences, nb_words=8, lang='en', punct_tag="PUNCT")
+    compresser = panda.word_graph(sentences, nb_words=8, lang='en', punct_tag="PUNCT")
 
     # 获取压缩结果
     candidates = compresser.get_compression(output_sent_num)
@@ -57,21 +59,35 @@ def keyphrases_based_msc(sentences, output_sent_num = 50):
 # 测试函数
 if __name__ == '__main__':
 
-    sentences = [
-        "The/DT wife/NN of/IN a/DT former/JJ U.S./NNP president/NN Bill/NNP Clinton/NNP Hillary/NNP Clinton/NNP visited/VBD China/NNP last/JJ Monday/NNP ./PUNCT",
-        "Hillary/NNP Clinton/NNP wanted/VBD to/TO visit/VB China/NNP last/JJ month/NN but/CC postponed/VBD her/PRP$ plans/NNS till/IN Monday/NNP last/JJ week/NN ./PUNCT",
-        "Hillary/NNP Clinton/NNP paid/VBD a/DT visit/NN to/TO the/DT People/NNP Republic/NNP of/IN China/NNP on/IN Monday/NNP ./PUNCT",
-        "Last/JJ week/NN the/DT Secretary/NNP of/IN State/NNP Ms./NNP Clinton/NNP visited/VBD Chinese/JJ officials/NNS ./PUNCT"
-    ]
+    if len(sys.argv) != 2:
+        print 'ERROR: please specify the topic dir!'
+        sys.exit(1)
 
-    print '原生多语句压缩：'
-    msc_results = protogenesis_msc(sentences, 50)
+    '''子句所在文件路径'''
+    sentences_dir = sys.argv[1]
 
-    for result in msc_results:
-        print result;
+    for parent, dirs, files in os.walk(sentences_dir + "/weighted"):
+        # 依次遍历每个主题文件
+        for filename in files:
+            print os.path.join(parent, filename) + ' is compressing...'
+            # 加载文本
+            text = open(os.path.join(parent, filename), 'r')
+            # 依次处理文本
+            clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
+            sentences = []
+            for line in text:
+                line = line.strip()
+                if line.startswith('classes_'):
+                    # 当前为类别分隔符
+                    sentences = []
+                    clusted_sentences[line] = sentences
+                else:
+                    sentences.append(line)
 
-    print '基于keyphrase重新打分的多语句压缩：'
-    msc_results = keyphrases_based_msc(sentences, 50)
+            for key in clusted_sentences:
+                print key
+                # 执行多语句压缩
+                for sent in clusted_sentences[key]:
+                    print sent
 
-    for result in msc_results:
-        print result;
+            sys.exit(1)
