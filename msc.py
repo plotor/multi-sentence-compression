@@ -23,10 +23,17 @@ def protogenesis_msc(sentences, output_sent_num = 50):
     candidates = compresser.get_compression(output_sent_num)
 
     # 对压缩结果进行归一化
-    results = []
+    tmp = []
     for score, path in candidates:
-        normalized_score = score / len(path)
-        results.append(str(round(normalized_score, 3)) + "#" + ' '.join([u[0] for u in path]))
+        tmp.append((score / len(path), path))
+
+    # 按照得分排序
+    tmp = sorted(tmp, key = lambda tmp : tmp[0])
+
+    # 封装结果返回
+    results = []
+    for score, path in tmp:
+        results.append(str(round(score, 6)) + "#" + ' '.join([u[0] for u in path]) + '\n')
 
     return results
 
@@ -53,7 +60,7 @@ def keyphrases_based_msc(sentences, output_sent_num = 50):
 
     results = []
     for score, path in reranked_candidates:
-        results.append(str(round(score, 3)) + "#" + ' '.join([u[0] for u in path]))
+        results.append(str(round(score, 6)) + "#" + ' '.join([u[0] for u in path]) + '\n')
 
     return results
 
@@ -74,11 +81,18 @@ def event_based_msc(sentences, output_sent_num = 50):
     # 获取压缩结果
     candidates = compresser.get_compression(output_sent_num)
 
-    # 对压缩结果进行归一化
-    results = []
+    # 对压缩结果进行归一化，并按得分由小到大排序
+    tmp = []
     for score, path in candidates:
-        normalized_score = score / len(path)
-        results.append(str(round(normalized_score, 3)) + "#" + ' '.join([u[0] for u in path]) + '\n')
+        tmp.append((score / len(path), path))
+
+    # 依据得分进行排序
+    tmp = sorted(tmp, key = lambda tmp : tmp[0])
+
+    # 封装结果返回
+    results = []
+    for score, path in tmp:
+        results.append(str(round(score, 6)) + "#" + ' '.join([u[0] for u in path]) + '\n')
 
     return results
 
@@ -97,7 +111,6 @@ if __name__ == '__main__':
 
 
     '''原生多语句压缩和基于keyphrases重排序的多语句压缩'''
-    '''
     for parent, dirs, files in os.walk(sentences_dir + "/tagged"):
 
         # 存放原生压缩结果
@@ -133,23 +146,23 @@ if __name__ == '__main__':
             # 原生压缩结果
             savepath = save_dir + '/protogenesis'
             if not os.path.exists(savepath):
-                os.mkdir(savepath)
+                os.makedirs(savepath)
             save_file = open(os.path.join(savepath, filename), 'w')
             for key in protogenesis_results:
-                save_file.write(key + ':')
+                save_file.write(key + '\n')
                 save_file.writelines(protogenesis_results[key])
             save_file.close()
 
             # 基于keyphrases的压缩结果
             savepath = save_dir + '/keyphrases'
             if not os.path.exists(savepath):
-                os.mkdir(savepath)
+                os.makedirs(savepath)
             save_file = open(os.path.join(savepath, filename), 'w')
             for key in keyphrased_based_resuts:
-                save_file.write(key + ':')
+                save_file.write(key + '\n')
                 save_file.writelines(keyphrased_based_resuts[key])
             save_file.close()
-            '''
+
 
     '''事件指导的多语句压缩'''
     for parent, dirs, files in os.walk(sentences_dir + "/weighted"):
