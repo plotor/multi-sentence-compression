@@ -35,18 +35,8 @@
 
 
 :History:
-    Development history of the takahe module:
-        - 0.4 (Mar. 2013) adding the keyphrase-based nbest reranking algorithm
-        - 0.33 (Feb. 2013), bug fixes and better code documentation
-        - 0.32 (Jun. 2012), Punctuation marks are now considered within the 
-          graph, compressions are then punctuated
-        - 0.31 (Nov. 2011), modified context function (uses the left and right 
-          contexts), improved docstring documentation, bug fixes
-        - 0.3 (Oct. 2011), improved K-shortest paths algorithm including 
-          verb/size constraints and ordered lists for performance
-        - 0.2 (Dec. 2010), removed dependencies from nltk (i.e. POS-tagging, 
-          tokenization and stopwords removal)
-        - 0.1 (Nov. 2010), first version
+    Development history of the panda module:
+        - 0.1 (2015-11-19), first version
 
 :Dependencies:
     The following Python modules are required:
@@ -56,7 +46,7 @@
 :Usage:
     A typical usage of this module is::
     
-        import takahe
+        import panda
         
         # A list of tokenized and POS-tagged sentences
         sentences = ['Hillary/NNP Clinton/NNP wanted/VBD to/stop visit/VB ...']
@@ -175,6 +165,9 @@ class word_graph:
         
         self.term_freq = {}
         """ The frequency of a given term. """
+
+        self.term_weight = {}
+        """The weight of a given term. """
         
         self.verbs = set(['VB', 'VBD', 'VBP', 'VBZ', 'VH', 'VHD', 'VHP', 'VBZ', 'VV', 'VVD', 'VVP', 'VVZ'])
         """
@@ -189,10 +182,10 @@ class word_graph:
         # 1. 预处理，将句子中的word/pos，按照空格切分成（word, pos）
         self.pre_process_sentences()
 
-        # 2. 统计每个词的词频
+        # 2. 统计每个词的词频，及其权重
         self.compute_statistics()
 
-        # 3. Build the word graph
+        # 3. 构建一个词图
         self.build_graph()
     #-B-----------------------------------------------------------------------B-
 
@@ -201,7 +194,7 @@ class word_graph:
     def pre_process_sentences(self):
         """
         Pre-process the list of sentences given as input. Split sentences using 
-        whitespaces and convert each sentence to a list of (word, POS) tuples.
+        whitespaces and convert each sentence to a list of (word, POS, weight) tuples.
         """
 
         for i in range(self.length):
@@ -210,25 +203,25 @@ class word_graph:
             self.sentence[i] = re.sub(' +', ' ', self.sentence[i])
             self.sentence[i] = self.sentence[i].strip()  # 类似java中的trim
             
-            # 按空格切分成词word/POS
+            # 按空格切分成词word/POS/weight
             sentence = self.sentence[i].split(' ')
 
             # 创建一个空的词容器（word, pos）
-            container = [(self.start, self.start)]
+            container = [(self.start, self.start, self.start)]
 
             # 循环处理句子中的每个词
             for w in sentence:
                 
-                # 将每个词的word和pos分离
+                # 将每个词的word, pos, weight分离
                 pos_separator_re = re.escape(self.pos_separator)
-                m = re.match("^(.+)" + pos_separator_re + "(.+)$", w)
-                token, POS = m.group(1), m.group(2)
+                m = re.match("^(.+)" + pos_separator_re + "(.+)" + pos_separator_re + "(\d+(\.\d+)*)$", w)
+                token, POS, weight = m.group(1), m.group(2), m.group(3)
 
                 # 循环添加词
-                container.append((token.lower(), POS))
+                container.append((token.lower(), POS, weight))
                     
             # 添加尾结点
-            container.append((self.stop, self.stop))
+            container.append((self.stop, self.stop, self.stop))
 
             self.sentence[i] = container
     #-B-----------------------------------------------------------------------B-
@@ -288,7 +281,7 @@ class word_graph:
             for j in range(sentence_len):
 
                 # Get the word and tag
-                token, POS = self.sentence[i][j]
+                token, POS, weight = self.sentence[i][j]
 
                 # 如果是停用词或者标点，则跳过
                 if token in self.stopwords or re.search('(?u)^\W$', token):
@@ -334,7 +327,7 @@ class word_graph:
             for j in range(sentence_len):
 
                 # Get the word and tag
-                token, POS = self.sentence[i][j]
+                token, POS, weight = self.sentence[i][j]
                 
                 # If stopword or punctuation mark, continues
                 if token in self.stopwords or re.search('(?u)^\W$', token):
@@ -347,8 +340,8 @@ class word_graph:
                     node = token.lower() + self.sep + POS
                     
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]  # 前一个词的word和pos
-                    next_token, next_POS = self.sentence[i][j+1]  # 后一个词的word和pos
+                    prev_token, prev_POS, prev_weight = self.sentence[i][j-1]  # 前一个词的word和pos
+                    next_token, next_POS, next_weight = self.sentence[i][j+1]  # 后一个词的word和pos
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
                     
@@ -424,10 +417,10 @@ class word_graph:
             for j in range(sentence_len):
 
                 # Get the word and tag
-                token, POS = self.sentence[i][j]
+                token, POS, weight = self.sentence[i][j]
 
                 # If *NOT* stopword, continues
-                if not token in self.stopwords :
+                if token not in self.stopwords :
                     continue
 
                 # Create the node identifier
@@ -449,8 +442,8 @@ class word_graph:
                 else:
                     
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]
-                    next_token, next_POS = self.sentence[i][j+1]
+                    prev_token, prev_POS, prev_weight = self.sentence[i][j-1]
+                    next_token, next_POS, next_weight = self.sentence[i][j+1]
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
 
@@ -495,8 +488,7 @@ class word_graph:
                     # Else create a new node
                     else:
                         # Add the node in the graph
-                        self.graph.add_node( (node, k) , info=[(i, j)],
-                                             label=token.lower() )
+                        self.graph.add_node((node, k) , info=[(i, j)], label=token.lower())
 
                         # Mark the word as mapped to k
                         mapping[j] = (node, k)
@@ -507,7 +499,7 @@ class word_graph:
             for j in range(sentence_len):
 
                 # Get the word and tag
-                token, POS = self.sentence[i][j]
+                token, POS, weight = self.sentence[i][j]
 
                 # If *NOT* punctuation mark, continues
                 if not re.search('(?u)^\W$', token):
@@ -523,8 +515,7 @@ class word_graph:
                 if k == 0:
 
                     # Add the node in the graph
-                    self.graph.add_node( (node, 0), info=[(i, j)], 
-                                         label=token.lower() )
+                    self.graph.add_node((node, 0), info=[(i, j)], label=token.lower())
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
@@ -533,8 +524,8 @@ class word_graph:
                 else:
                     
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS = self.sentence[i][j-1]
-                    next_token, next_POS = self.sentence[i][j+1]
+                    prev_token, prev_POS, prev_weight = self.sentence[i][j-1]
+                    next_token, next_POS, next_weight = self.sentence[i][j+1]
                     prev_node = prev_token.lower() + self.sep + prev_POS
                     next_node = next_token.lower() + self.sep + next_POS
 
@@ -680,11 +671,28 @@ class word_graph:
         
         # Get the frequency of node1 in the graph
         # freq1 = self.graph.degree(node1)
-        freq1 = len(info1)
+        #freq1 = len(info1)
+
+        # 结点1的权重
+        key = node1[0]
+        if key in self.term_weight:
+            weight1 = self.term_weight[key]
+        else:
+            weight1 = 0.0
         
         # Get the frequency of node2 in cluster
         # freq2 = self.graph.degree(node2)
-        freq2 = len(info2)
+        #freq2 = len(info2)
+
+        # 结点2的权重
+        key = node2[0]
+        if key in self.term_weight:
+            weight2 = self.term_weight[key]
+        else:
+            weight2 = 0.0
+
+        if weight1 == 0 or weight2 == 0:
+            return 0
 
         # Initializing the diff function list container
         diff = []
@@ -733,11 +741,9 @@ class word_graph:
                 diff.append(1.0/min(all_diff_pos_i_j))
             else:
                 diff.append(0.0)
-                
-        weight1 = freq1
-        weight2 = freq2
 
-        return ( (freq1 + freq2) / sum(diff) ) / (weight1 * weight2)
+        return ((weight1 + weight2) / sum(diff)) / (weight1 * weight2)
+        #return ( (freq1 + freq2) / sum(diff) ) / (weight1 * weight2)
     #-B-----------------------------------------------------------------------B-
    
    
@@ -926,28 +932,49 @@ class word_graph:
         - term frequency (self.term_freq)
         """
 
-        # Structure for containing the list of sentences in which a term occurs
+        # 存放每个词，即包含该词的句子编号
         terms = {}
+
+        # 存放每个词，以及该词在每个句子中的权重
+        weights = {}
 
         # 遍历sentences
         for i in range(self.length):
         
             # 依次处理句子中的(word, pos)
-            for token, POS in self.sentence[i]:
+            for token, POS, weight in self.sentence[i]:
             
                 # generate the word/POS token
                 node = token.lower() + self.sep + POS  # node = word/-/pos
                 
-                # 以word/-/pos为key，词的编号为value，一个key可以对应多个value，value中的元素不去重，方便后续的词频统计
-                if not terms.has_key(node):
+                # 以word/-/pos为key，value中存储这个词在包含该词的句子中的序号
+                if node not in terms:
                     terms[node] = [i]
                 else:
                     terms[node].append(i)
 
+                if weight == self.start or weight == self.stop:
+                    continue
+
+                # 以word/-/pos为key，value中存储这个词在包含该词的句子中的权重
+                if node not in weights:
+                    weights[node] = [float(weight)]
+                else:
+                    weights[node].append(float(weight))
+
         # 遍历处理terms中的keys
-        for w in terms:
+        for key in terms:
             # 统计每个词的词频
-            self.term_freq[w] = len(terms[w])
+            self.term_freq[key] = len(terms[key])
+
+        # 遍历处理weights中的keys
+        for key in weights:
+            # 累加每个词的总权重
+            tw = 0.0
+            for w in weights[key]:
+                tw += w
+
+            self.term_weight[key] = tw
     #-B-----------------------------------------------------------------------B-
 
 
