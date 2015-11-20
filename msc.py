@@ -121,53 +121,55 @@ if __name__ == '__main__':
 
                 print os.path.join(parent, filename) + ' is compressing...'
 
-                # 加载文本
-                text = open(os.path.join(parent, filename), 'r')
-
                 # 依次处理文本
                 clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
                 sentences = []
-                for line in text:
-                    line = line.strip()
-                    if line.startswith('classes_'):
-                        # 当前为类别分隔符
-                        sentences = []
-                        clusted_sentences[line] = sentences
-                    else:
-                        sentences.append(line)
 
-                # 存放原生压缩结果
-                protogenesis_results = {}
+                # 加载文本
+                with open(os.path.join(parent, filename), 'r') as text:
+                    for line in text:
+                        line = line.strip()
+                        if line.startswith('classes_'):
+                            # 当前为类别分隔符
+                            sentences = []
+                            clusted_sentences[line] = sentences
+                        else:
+                            sentences.append(line)
 
-                # 存放基于关键短语重排序的结果
-                keyphrased_based_resuts = {}
+                    # 存放原生压缩结果
+                    protogenesis_results = {}
 
-                for key in clusted_sentences:
-                    print 'compressing:' + filename + ' - ' + key
-                    # 执行多语句压缩
-                    protogenesis_results[key] = protogenesis_msc(clusted_sentences[key], 50)
-                    keyphrased_based_resuts[key] = keyphrases_based_msc(clusted_sentences[key], 50)
+                    # 存放基于关键短语重排序的结果
+                    keyphrased_based_resuts = {}
+
+                    for key in clusted_sentences:
+                        print 'compressing:' + filename + ' - ' + key
+                        # 执行多语句压缩
+                        protogenesis_results[key] = protogenesis_msc(clusted_sentences[key], 50)
+                        keyphrased_based_resuts[key] = keyphrases_based_msc(clusted_sentences[key], 50)
 
                 # 保存结果到文件
                 # 原生压缩结果
                 savepath = save_dir + '/protogenesis'
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
-                save_file = open(os.path.join(savepath, filename), 'w')
-                for key in protogenesis_results:
-                    save_file.write(key + '\n')
-                    save_file.writelines(protogenesis_results[key])
-                save_file.close()
+
+                with open(os.path.join(savepath, filename), 'w') as save_file:
+                    for key in protogenesis_results:
+                        save_file.write(key + '\n')
+                        save_file.writelines(protogenesis_results[key])
+                        save_file.flush()
 
                 # 基于keyphrases的压缩结果
                 savepath = save_dir + '/keyphrases'
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
-                save_file = open(os.path.join(savepath, filename), 'w')
-                for key in keyphrased_based_resuts:
-                    save_file.write(key + '\n')
-                    save_file.writelines(keyphrased_based_resuts[key])
-                save_file.close()
+
+                with open(os.path.join(savepath, filename), 'w') as save_file:
+                    for key in keyphrased_based_resuts:
+                        save_file.write(key + '\n')
+                        save_file.writelines(keyphrased_based_resuts[key])
+                        save_file.flush()
 
     if run_mode == 3 or run_mode == 2:
         '''事件指导的多语句压缩'''
@@ -176,19 +178,21 @@ if __name__ == '__main__':
             # 依次遍历每个主题文件
             for filename in files:
                 print os.path.join(parent, filename) + ' is compressing...'
-                # 加载文本
-                text = open(os.path.join(parent, filename), 'r')
+
                 # 依次处理文本
                 clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
                 sentences = []
-                for line in text:
-                    line = line.strip()
-                    if line.startswith('classes_'):
-                        # 当前为类别分隔符
-                        sentences = []
-                        clusted_sentences[line] = sentences
-                    else:
-                        sentences.append(line)
+
+                # 加载文本
+                with open(os.path.join(parent, filename), 'r') as text:
+                    for line in text:
+                        line = line.strip()
+                        if line.startswith('classes_'):
+                            # 当前为类别分隔符
+                            sentences = []
+                            clusted_sentences[line] = sentences
+                        else:
+                            sentences.append(line)
 
                 # 存放基于事件指导的压缩结果
                 event_based_results = {}
@@ -203,8 +207,9 @@ if __name__ == '__main__':
                 savepath = save_dir + '/events'
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
-                save_file = open(os.path.join(savepath, filename), 'w')
-                for key in event_based_results:
-                    save_file.write(key + '\n')
-                    save_file.writelines(event_based_results[key])
-                save_file.close()
+
+                with open(os.path.join(savepath, filename), 'w') as save_file:
+                    for key in event_based_results:
+                        save_file.write(key + '\n')
+                        save_file.writelines(event_based_results[key])
+                        save_file.flush()
