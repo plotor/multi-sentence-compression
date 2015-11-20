@@ -116,17 +116,14 @@ if __name__ == '__main__':
         '''原生多语句压缩和基于keyphrases重排序的多语句压缩'''
         for parent, dirs, files in os.walk(sentences_dir + "/tagged"):
 
-            # 存放原生压缩结果
-            protogenesis_results = {}
-
-            # 存放基于关键短语重排序的结果
-            keyphrased_based_resuts = {}
-
             # 依次遍历每个主题文件
             for filename in files:
+
                 print os.path.join(parent, filename) + ' is compressing...'
+
                 # 加载文本
                 text = open(os.path.join(parent, filename), 'r')
+
                 # 依次处理文本
                 clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
                 sentences = []
@@ -138,6 +135,12 @@ if __name__ == '__main__':
                         clusted_sentences[line] = sentences
                     else:
                         sentences.append(line)
+
+                # 存放原生压缩结果
+                protogenesis_results = {}
+
+                # 存放基于关键短语重排序的结果
+                keyphrased_based_resuts = {}
 
                 for key in clusted_sentences:
                     print 'compressing:' + filename + ' - ' + key
@@ -170,9 +173,6 @@ if __name__ == '__main__':
         '''事件指导的多语句压缩'''
         for parent, dirs, files in os.walk(sentences_dir + "/weighted"):
 
-            # 存放基于事件指导的压缩结果
-            event_based_results = {}
-
             # 依次遍历每个主题文件
             for filename in files:
                 print os.path.join(parent, filename) + ' is compressing...'
@@ -189,6 +189,9 @@ if __name__ == '__main__':
                         clusted_sentences[line] = sentences
                     else:
                         sentences.append(line)
+
+                # 存放基于事件指导的压缩结果
+                event_based_results = {}
 
                 for key in clusted_sentences:
                     print 'compressing:' + filename + ' - ' + key
