@@ -3,8 +3,17 @@
 
 import sys
 import os
+import logging
 import takahe
 import panda
+
+# 设置日志格式
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+    datefmt='%a, %d %b %Y %H:%M:%S',
+    filename='msc.log',
+    filemode='w')
 
 
 def protogenesis_msc(sentences, output_sent_num = 50):
@@ -128,7 +137,7 @@ def event_keyphrase_based_msc(sentences, output_sent_num=50):
 if __name__ == '__main__':
 
     if len(sys.argv) != 4:
-        print 'ERROR: please specify the topic dir!'
+        logging.error('Parameter error!')
         sys.exit(1)
 
     '''子句所在文件路径'''
@@ -140,14 +149,14 @@ if __name__ == '__main__':
     '''运行模式：1→原生&kp; 2→event; 4→event_kp; 7→all'''
     run_mode = int(sys.argv[3])
 
-    if run_mode == 7 or run_mode == 1:
+    if run_mode == 7 or run_mode == 5 or run_mode == 3 or run_mode == 1:
         '''原生多语句压缩和基于keyphrases重排序的多语句压缩'''
         for parent, dirs, files in os.walk(sentences_dir + "/tagged"):
 
             # 依次遍历每个主题文件
             for filename in files:
 
-                print os.path.join(parent, filename) + ' is compressing...'
+                logging.info('Compressing: %s', os.path.join(parent, filename))
 
                 # 依次处理文本
                 clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
@@ -164,17 +173,24 @@ if __name__ == '__main__':
                         else:
                             sentences.append(line)
 
-                    # 存放原生压缩结果
-                    protogenesis_results = {}
+                # 存放原生压缩结果
+                protogenesis_results = {}
 
-                    # 存放基于关键短语重排序的结果
-                    keyphrased_based_resuts = {}
+                # 存放基于关键短语重排序的结果
+                keyphrased_based_resuts = {}
 
-                    for key in clusted_sentences:
-                        print '[protogenesis | keyphrases]compressing:' + filename + ' - ' + key
-                        # 执行多语句压缩
-                        protogenesis_results[key] = protogenesis_msc(clusted_sentences[key], 50)
-                        keyphrased_based_resuts[key] = keyphrases_based_msc(clusted_sentences[key], 50)
+                for key in clusted_sentences:
+
+                    # 执行多语句压缩
+                    logging.info('[protogenesis]compressing, filename=%s, class=%s', filename, key)
+                    protogenesis_results[key] = protogenesis_msc(clusted_sentences[key], 50)
+                    logging.info('[protogenesis]compress success, filename=%s, class=%s', filename, key)
+
+                    logging.info('[keyphrases]compressing, filename=%s, class=%s', filename, key)
+                    keyphrased_based_resuts[key] = keyphrases_based_msc(clusted_sentences[key], 50)
+                    logging.info('[keyphrases]compress success, filename=%s, class=%s', filename, key)
+
+                logging.info('Compress file[%s] finished!', filename)
 
                 # 保存结果到文件
                 # 原生压缩结果
@@ -182,30 +198,38 @@ if __name__ == '__main__':
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
 
+                logging.info('Saving file[%s]', os.path.join(savepath, filename))
                 with open(os.path.join(savepath, filename), 'w') as save_file:
+
                     for key in protogenesis_results:
                         save_file.write(key + '\n')
                         save_file.writelines(protogenesis_results[key])
                         save_file.flush()
+
+                logging.info('Save file[%s] success!', os.path.join(savepath, filename))
 
                 # 基于keyphrases的压缩结果
                 savepath = save_dir + '/keyphrases'
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
 
+                logging.info('Saving file[%s]', os.path.join(savepath, filename))
                 with open(os.path.join(savepath, filename), 'w') as save_file:
                     for key in keyphrased_based_resuts:
                         save_file.write(key + '\n')
                         save_file.writelines(keyphrased_based_resuts[key])
                         save_file.flush()
 
-    if run_mode == 7 or run_mode == 2:
+                logging.info('Save file[%s] success!', os.path.join(savepath, filename))
+
+    if run_mode == 7 or run_mode == 3 or run_mode == 6 or run_mode == 2:
         '''事件指导的多语句压缩'''
         for parent, dirs, files in os.walk(sentences_dir + "/weighted"):
 
             # 依次遍历每个主题文件
             for filename in files:
-                print os.path.join(parent, filename) + ' is compressing...'
+
+                logging.info('Compressing: %s', os.path.join(parent, filename))
 
                 # 依次处理文本
                 clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
@@ -226,9 +250,12 @@ if __name__ == '__main__':
                 event_based_results = {}
 
                 for key in clusted_sentences:
-                    print '[event]compressing:' + filename + ' - ' + key
                     # 执行多语句压缩
+                    logging.info('[events]compressing, filename=%s, class=%s', filename, key)
                     event_based_results[key] = event_based_msc(clusted_sentences[key], 50)
+                    logging.info('[events]compress success, filename=%s, class=%s', filename, key)
+
+                logging.info('Compress file[%s] finished!', filename)
 
                 # 保存结果到文件
                 # 基于事件驱动的压缩结果
@@ -236,20 +263,24 @@ if __name__ == '__main__':
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
 
+                logging.info('Saving file[%s]', os.path.join(savepath, filename))
                 with open(os.path.join(savepath, filename), 'w') as save_file:
                     for key in event_based_results:
                         save_file.write(key + '\n')
                         save_file.writelines(event_based_results[key])
                         save_file.flush()
 
+                logging.info('Save file[%s] success!', os.path.join(savepath, filename))
+
     # 有点问题
-    if run_mode == 7 or run_mode == 4:
+    if run_mode == 7 or run_mode == 6 or run_mode == 5 or run_mode == 4:
         '''事件指导的多语句压缩，并利用keyphrase对结果进行reranking'''
         for parent, dirs, files in os.walk(sentences_dir + "/weighted"):
 
             # 依次遍历每个主题文件
             for filename in files:
-                print os.path.join(parent, filename) + ' is compressing...'
+
+                logging.info('Compressing: %s', os.path.join(parent, filename))
 
                 # 依次处理文本
                 clusted_sentences = {}  # 存放一个主题下的句子集合，按类别组织
@@ -270,9 +301,12 @@ if __name__ == '__main__':
                 event_based_results = {}
 
                 for key in clusted_sentences:
-                    print '[events+keyphrases]compressing:' + filename + ' - ' + key
                     # 执行多语句压缩
+                    logging.info('[events+keyphrases]compressing, filename=%s, class=%s', filename, key)
                     event_based_results[key] = event_keyphrase_based_msc(clusted_sentences[key], 50)
+                    logging.info('[events+keyphrases]compress success, filename=%s, class=%s', filename, key)
+
+                logging.info('Compress file[%s] finished!', filename)
 
                 # 保存结果到文件
                 # 基于事件驱动的压缩结果
@@ -280,8 +314,11 @@ if __name__ == '__main__':
                 if not os.path.exists(savepath):
                     os.makedirs(savepath)
 
+                logging.info('Saving file[%s]', os.path.join(savepath, filename))
                 with open(os.path.join(savepath, filename), 'w') as save_file:
                     for key in event_based_results:
                         save_file.write(key + '\n')
                         save_file.writelines(event_based_results[key])
                         save_file.flush()
+
+                logging.info('Save file[%s] success!', os.path.join(savepath, filename))
