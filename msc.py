@@ -91,6 +91,8 @@ def event_based_msc(sentences, output_sent_num = 50):
     # 获取压缩结果
     candidates = compresser.get_compression(output_sent_num)
 
+    compresser.write_dot('graph.dot')
+
     # 对压缩结果进行归一化，并按得分由小到大排序
     tmp = []
     for score, path in candidates:
@@ -151,6 +153,7 @@ if __name__ == '__main__':
 
     if run_mode == 7 or run_mode == 5 or run_mode == 3 or run_mode == 1:
         '''原生多语句压缩和基于keyphrases重排序的多语句压缩'''
+
         for parent, dirs, files in os.walk(sentences_dir + "/tagged"):
 
             # 依次遍历每个主题文件
