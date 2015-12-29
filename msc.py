@@ -91,7 +91,8 @@ def event_based_msc(sentences, output_sent_num = 50):
     # 获取压缩结果
     candidates = compresser.get_compression(output_sent_num)
 
-    compresser.write_dot('graph.dot')
+    # 将图保存成文本形式
+    # compresser.write_dot('graph.dot')
 
     # 对压缩结果进行归一化，并按得分由小到大排序
     tmp = []
