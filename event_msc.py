@@ -5,7 +5,6 @@
 基于事件指导的多语句压缩
 """
 
-import sys
 import os
 import logging
 import panda
@@ -18,6 +17,7 @@ logging.basicConfig(
     filename='../../../logs/event_msc.log',
     filemode='w')
 
+
 def event_based_msc(sentences, output_sent_num = 50):
 
     """
@@ -29,7 +29,7 @@ def event_based_msc(sentences, output_sent_num = 50):
 
     # 构建词图，并执行压缩
     # 忽略词数小于8的句子
-    compresser = panda.word_graph(sentences, nb_words=8, lang='en', punct_tag="PUNCT")
+    compresser = panda.WordGraph(sentences, nb_words=8, lang='en', punct_tag="PUNCT")
 
     # 获取压缩结果
     candidates = compresser.get_compression(output_sent_num)

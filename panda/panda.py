@@ -99,15 +99,12 @@ import math
 import codecs
 import os
 import re
-import sys
 import bisect
 import networkx as nx
-#import matplotlib.pyplot as plt
 
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-# [ Class word_graph
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-class word_graph:
+
+class WordGraph:
+
     """
     The word_graph class constructs a word graph from the set of sentences given
     as input. The set of sentences is a list of strings, sentences are tokenized
@@ -124,7 +121,6 @@ class word_graph:
       (default is PUNCT).
     """
 
-    #-T-----------------------------------------------------------------------T-
     def __init__(self, sentence_list, nb_words=8, lang="en", punct_tag="PUNCT", pos_separator='/'):
 
         self.sentence = list(sentence_list)
@@ -179,124 +175,150 @@ class word_graph:
         if lang == "fr":
             self.verbs = set(['V', 'VPP', 'VINF'])
 
-        # 1. 预处理，将句子中的word/pos，按照空格切分成（word, pos）
+        # 1. 预处理，将句子中的word/pos/weight，按照空格切分成（word, pos, weight）
         self.pre_process_sentences()
 
-        # 2. 统计每个词的词频，及其权重
+        # 2. 统计每个词的词频，及其总权重
         self.compute_statistics()
 
-        # 3. 构建一个词图
+        # 3. 构建词图
         self.build_graph()
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def pre_process_sentences(self):
+
         """
-        Pre-process the list of sentences given as input. Split sentences using 
-        whitespaces and convert each sentence to a list of (word, POS, weight) tuples.
+        预处理：将字符串形式的句子中的词格式化成（word, pos, weight）
         """
 
         for i in range(self.length):
         
             # 将句子中的空格统一化，然后去除每个词的首尾空格
             self.sentence[i] = re.sub(' +', ' ', self.sentence[i])
-            self.sentence[i] = self.sentence[i].strip()  # 类似java中的trim
+            self.sentence[i] = self.sentence[i].strip()  # 删除句子的首尾空格
             
-            # 按空格切分成词word/POS/weight
-            sentence = self.sentence[i].split(' ')
+            # 按空格切分成词word/pos/weight
+            words = self.sentence[i].split(' ')
 
-            # 创建一个空的词容器（word, pos）
+            # 创建一个空的词容器（word, pos, weight）
             container = [(self.start, self.start, self.start)]
 
             # 循环处理句子中的每个词
-            for w in sentence:
+            for w in words:
                 
                 # 将每个词的word, pos, weight分离
                 pos_separator_re = re.escape(self.pos_separator)
                 m = re.match("^(.+)" + pos_separator_re + "(.+)" + pos_separator_re + "(\d+(\.\d+)*)$", w)
-                token, POS, weight = m.group(1), m.group(2), m.group(3)
+                token, pos, weight = m.group(1), m.group(2), m.group(3)
 
                 # 循环添加词
-                container.append((token.lower(), POS, weight))
+                container.append((token.lower(), pos, weight))
                     
             # 添加尾结点
             container.append((self.stop, self.stop, self.stop))
 
             self.sentence[i] = container
-    #-B-----------------------------------------------------------------------B-
-    
-    
-    #-T-----------------------------------------------------------------------T-
-    def build_graph(self):
+
+    def compute_statistics(self):
+
         """
-        Constructs a directed word graph from the list of input sentences. Each
-        sentence is iteratively added to the directed graph according to the 
-        following algorithm:
+        计算每个词的词频和总权重
+        """
 
-        - Word mapping/creation is done in four steps:
+        # key：词；value：包含该词的句子的序号
+        terms = {}
 
-            1. non-stopwords for which no candidate exists in the graph or for 
-               which an unambiguous mapping is possible or which occur more than
-               once in the sentence
+        # key：词，value：该词在各包含该词的句子中的权重
+        weights = {}
 
-            2. non-stopwords for which there are either several possible
-               candidates in the graph
+        # 遍历sentences
+        for i in range(self.length):
 
-            3. stopwords
+            # 依次处理句子中的(word, pos, weight)
+            for token, pos, weight in self.sentence[i]:
 
-            4. punctuation marks
+                # 生成word/-/pos标签
+                node = token.lower() + self.sep + pos  # node = word/-/pos
 
-        For the last three groups of words where mapping is ambiguous we check 
-        the immediate context (the preceding and following words in the sentence 
-        and the neighboring nodes in the graph) and select the candidate which 
-        has larger overlap in the context, or the one with a greater frequency 
-        (i.e. the one which has more words mapped onto it). Stopwords are mapped 
-        only if there is some overlap in non-stopwords neighbors, otherwise a 
-        new node is created. Punctuation marks are mapped only if the preceding 
-        and following words in the sentence and the neighboring nodes are the
-        same.
+                # 以word/-/pos为key，value中存储包含该词的句子的序号
+                if node not in terms:
+                    terms[node] = [i]
+                else:
+                    terms[node].append(i)
 
-        - Edges are then computed and added between mapped words.
+                if weight == self.start or weight == self.stop:
+                    continue
+
+                # 以word/-/pos为key，value中存储该词在各个句子中的权重
+                if node not in weights:
+                    weights[node] = [float(weight)]
+                else:
+                    weights[node].append(float(weight))
+
+        # 遍历处理terms中的keys
+        for key in terms:
+            # 统计每个词的词频
+            self.term_freq[key] = len(terms[key])
+
+        # 遍历处理weights中的keys
+        for key in weights:
+            # 统计每个词的总权重
+            tw = 0.0
+            for w in weights[key]:
+                tw += w
+            self.term_weight[key] = tw
+
+    def build_graph(self):
+
+        """
+        - 迭代添加句子，构建有向连通词图，词语添加顺序：
+
+        1. 没有候选结点或者具有明确的候选结点或者在一个句子中出现多次的非停用词
+
+        2. 具有多个候选结点的非停用词
+
+        3. 停用词
+
+        4. 标点
+
+        对于2、3、4，如果具有多个候选结点，则选择上下文和词图中的邻接结点覆盖度最大的结点。
+
+        - 为词图添加边
         
-        Each node in the graph is represented as a tuple ('word/POS', id) and 
-        possesses an info list containing (sentence_id, position_in_sentence)
-        tuples.
-        """     
+        词图中的每个结点是一个元组('word/POS', id)，同时附加一个info信息，info为一个列表，
+        其中存储每个包含该词的句子sentence_id和在句子中的位置position_in_sentence
+
+        """
 
         # 逐个添加句子
         for i in range(self.length):
 
-            # Compute the sentence length
+            # 计算句子的长度（包含的词数）
             sentence_len = len(self.sentence[i])
 
-            # Create the mapping container, 用sentence_len个0填充
+            # 标记，用0初始化
             mapping = [0] * sentence_len
 
-            #-------------------------------------------------------------------
-            # 1. non-stopwords for which no candidate exists in the graph or for 
-            #    which an unambiguous（清晰的、明确的） mapping is possible or which
-            #    occur more than once in the sentence.
-            #-------------------------------------------------------------------
+            # -------------------------------------------------------------------
+            # 1. 没有候选结点或者具有明确的候选结点或者在一个句子中出现多次的非停用词
+            # -------------------------------------------------------------------
             for j in range(sentence_len):
 
-                # Get the word and tag
-                token, POS, weight = self.sentence[i][j]
+                token, pos, weight = self.sentence[i][j]
 
                 # 如果是停用词或者标点，则跳过
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
             
-                # Create the node identifier
-                node = token.lower() + self.sep + POS
+                # 结点标识：word/-/pos
+                node = token.lower() + self.sep + pos
 
-                # 计算途中可能的候选结点的个数
+                # 计算图中可能的候选结点的个数
                 k = self.ambiguous_nodes(node)
 
-                # 如果图中没有结点，则新建一个结点，令id为0
+                # 如果图中没有结点，则新建一个结点，id为0
                 if k == 0:
 
-                    # Add the node in the graph
+                    # 添加一个id为0的结点，i为句子编号，j为当前词在句子中的编号
                     self.graph.add_node((node, 0), info=[(i, j)], label=token.lower())
 
                     # Mark the word as mapped to k
@@ -305,55 +327,52 @@ class word_graph:
                 # 只有一个匹配的结点（即id为0的结点）
                 elif k == 1:
 
-                    # Get the sentences id of this node
+                    # 获取包含当前结点的句子ID
                     ids = []
                     for sid, pos_s in self.graph.node[(node, 0)]['info']:
                         ids.append(sid)
                     
-                    # Update the node in the graph if not same sentence
-                    if not i in ids:
+                    # 如果之前结点与当前结点不属于同一个句子，则更新该结点（在info中添加一个属性）
+                    if i not in ids:
                         self.graph.node[(node, 0)]['info'].append((i, j))
                         mapping[j] = (node, 0)
 
-                    # Else Create new node for redundant word
+                    # 否则为当前冗余的词创建一个新的结点
                     else:
                         self.graph.add_node((node, 1), info=[(i, j)], label=token.lower())
                         mapping[j] = (node, 1)
 
-            #-------------------------------------------------------------------
-            # 2. non-stopwords for which there are either several possible
-            #    candidates in the graph.
-            #-------------------------------------------------------------------
+            # -------------------------------------------------------------------
+            # 2. 具有多个候选结点的非停用词
+            # -------------------------------------------------------------------
             for j in range(sentence_len):
 
-                # Get the word and tag
-                token, POS, weight = self.sentence[i][j]
+                token, pos, weight = self.sentence[i][j]
                 
-                # If stopword or punctuation mark, continues
+                # 如果是停用词或者标点，则跳过
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
 
-                # If word is not already mapped to a node
+                # 当前词没有相应的映射
                 if mapping[j] == 0:
 
-                    # Create the node identifier
-                    node = token.lower() + self.sep + POS
+                    # 结点标识：word/-/pos
+                    node = token.lower() + self.sep + pos
                     
-                    # Create the neighboring nodes identifiers
-                    prev_token, prev_POS, prev_weight = self.sentence[i][j-1]  # 前一个词的word和pos
-                    next_token, next_POS, next_weight = self.sentence[i][j+1]  # 后一个词的word和pos
-                    prev_node = prev_token.lower() + self.sep + prev_POS
-                    next_node = next_token.lower() + self.sep + next_POS
+                    # 创建邻接结点的标识
+                    prev_token, prev_pos, prev_weight = self.sentence[i][j-1]  # 前一个词的word和pos
+                    next_token, next_pos, next_weight = self.sentence[i][j+1]  # 后一个词的word和pos
+                    prev_node = prev_token.lower() + self.sep + prev_pos
+                    next_node = next_token.lower() + self.sep + next_pos
                     
-                    # Find the number of ambiguous nodes in the graph
+                    # 计算图中可能的候选结点的个数
                     k = self.ambiguous_nodes(node)
 
-                    # Search for the ambiguous node with the larger overlap（重叠） in
-                    # context or the greater frequency.
+                    # 寻找候选结点中具有最大上下文覆盖度或最大频度的结点
                     ambinode_overlap = []
                     ambinode_frequency = []
             
-                    # For each ambiguous node
+                    # 依次处理每个候选结点
                     for l in range(k):
 
                         # 获取结点的上文
@@ -362,32 +381,34 @@ class word_graph:
                         # 获取结点的下文
                         r_context = self.get_directed_context(node, l, 'right')
                         
-                        # Compute the (directed) context sum
+                        # 计算对应node在相应上下文中出现的总次数
                         val = l_context.count(prev_node) 
                         val += r_context.count(next_node)
 
-                        # Add the count of the overlapping words
+                        # 保存每个候选结点的上下文覆盖度
                         ambinode_overlap.append(val)
 
-                        # Add the frequency of the ambiguous node
+                        # 保存每个候选结点的频度
                         ambinode_frequency.append(len(self.graph.node[(node, l)]['info']))
                 
-                    # Search for the best candidate while avoiding a loop
+                    # 寻找最佳候选结点（避免环路）
                     found = False
                     selected = 0
                     while not found:
                     
-                        # Select the ambiguous node
+                        # 覆盖度最大的结点下标
                         selected = self.max_index(ambinode_overlap)
+
+                        # 如果覆盖度不能区分，则用最大的频度
                         if ambinode_overlap[selected] == 0:
                             selected = self.max_index(ambinode_frequency)
                         
-                        # Get the sentences id of this node
+                        # 获取句子对应的ID
                         ids = []
                         for sid, p in self.graph.node[(node, selected)]['info']:
                             ids.append(sid)
                         
-                        # Test if there is no loop
+                        # 避免环路
                         if i not in ids:
                             found = True
                             break
@@ -411,22 +432,21 @@ class word_graph:
                         self.graph.add_node((node, k), info=[(i, j)], label=token.lower())
                         mapping[j] = (node, k)
             
-            #-------------------------------------------------------------------
-            # 3. map the stopwords to the nodes
-            #-------------------------------------------------------------------
+            # -------------------------------------------------------------------
+            # 3. 处理停用词
+            # -------------------------------------------------------------------
             for j in range(sentence_len):
 
-                # Get the word and tag
-                token, POS, weight = self.sentence[i][j]
+                token, pos, weight = self.sentence[i][j]
 
-                # If *NOT* stopword, continues
-                if token not in self.stopwords :
+                # 如果不是停用词，则跳过
+                if token not in self.stopwords:
                     continue
 
-                # Create the node identifier
-                node = token.lower() + self.sep + POS
+                # 结点标识：word/-/pos
+                node = token.lower() + self.sep + pos
                     
-                # Find the number of ambiguous nodes in the graph
+                # 获取候选结点的数目
                 k = self.ambiguous_nodes(node)
 
                 # If there is no node in the graph, create one with id = 0
@@ -442,10 +462,10 @@ class word_graph:
                 else:
                     
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS, prev_weight = self.sentence[i][j-1]
-                    next_token, next_POS, next_weight = self.sentence[i][j+1]
-                    prev_node = prev_token.lower() + self.sep + prev_POS
-                    next_node = next_token.lower() + self.sep + next_POS
+                    prev_token, prev_pos, prev_weight = self.sentence[i][j-1]
+                    next_token, next_pos, next_weight = self.sentence[i][j+1]
+                    prev_node = prev_token.lower() + self.sep + prev_pos
+                    next_node = next_token.lower() + self.sep + next_pos
 
                     ambinode_overlap = []
             
@@ -475,9 +495,6 @@ class word_graph:
                     # Update the node in the graph if not same sentence and 
                     # there is at least one overlap in context
                     if i not in ids and ambinode_overlap[selected] > 0:
-                    # if i not in ids and \
-                    # (ambinode_overlap[selected] > 1 and POS==self.punct_tag) or\
-                    # (ambinode_overlap[selected] > 0 and POS!=self.punct_tag) :
 
                         # Update the node in the graph
                         self.graph.node[(node, selected)]['info'].append((i, j))
@@ -488,27 +505,26 @@ class word_graph:
                     # Else create a new node
                     else:
                         # Add the node in the graph
-                        self.graph.add_node((node, k) , info=[(i, j)], label=token.lower())
+                        self.graph.add_node((node, k), info=[(i, j)], label=token.lower())
 
                         # Mark the word as mapped to k
                         mapping[j] = (node, k)
 
-            #-------------------------------------------------------------------
-            # 4. lasty map the punctuation marks to the nodes
-            #-------------------------------------------------------------------
+            # -------------------------------------------------------------------
+            # 4. 处理标点
+            # -------------------------------------------------------------------
             for j in range(sentence_len):
 
-                # Get the word and tag
-                token, POS, weight = self.sentence[i][j]
+                token, pos, weight = self.sentence[i][j]
 
-                # If *NOT* punctuation mark, continues
+                # 如果不是标点，则跳过
                 if not re.search('(?u)^\W$', token):
                     continue
 
-                # Create the node identifier
-                node = token.lower() + self.sep + POS
+                # 结点标识：word/-/pos
+                node = token.lower() + self.sep + pos
                     
-                # Find the number of ambiguous nodes in the graph
+                # 计算相似结点的数目
                 k = self.ambiguous_nodes(node)
 
                 # If there is no node in the graph, create one with id = 0
@@ -524,10 +540,10 @@ class word_graph:
                 else:
                     
                     # Create the neighboring nodes identifiers
-                    prev_token, prev_POS, prev_weight = self.sentence[i][j-1]
-                    next_token, next_POS, next_weight = self.sentence[i][j+1]
-                    prev_node = prev_token.lower() + self.sep + prev_POS
-                    next_node = next_token.lower() + self.sep + next_POS
+                    prev_token, prev_pos, prev_weight = self.sentence[i][j-1]
+                    next_token, next_pos, next_weight = self.sentence[i][j+1]
+                    prev_node = prev_token.lower() + self.sep + prev_pos
+                    next_node = next_token.lower() + self.sep + next_pos
 
                     ambinode_overlap = []
             
@@ -571,33 +587,29 @@ class word_graph:
                         # Mark the word as mapped to k
                         mapping[j] = (node, k)
 
-            #-------------------------------------------------------------------
-            # 4. Connects the mapped words with directed edges
-            #-------------------------------------------------------------------
+            # -------------------------------------------------------------------
+            # 4. 添加边
+            # -------------------------------------------------------------------
             for j in range(1, len(mapping)):
                 self.graph.add_edge(mapping[j-1], mapping[j])
 
-        # Assigns a weight to each node in the graph ---------------------------
+        # 计算每条边对应的权值
         for node1, node2 in self.graph.edges_iter():
             edge_weight = self.get_edge_weight(node1, node2)
             self.graph.add_edge(node1, node2, weight=edge_weight)
-    #-B-----------------------------------------------------------------------B-
 
- 
-    #-T-----------------------------------------------------------------------T-
     def ambiguous_nodes(self, node):
+
         """
-        Takes a node in parameter and returns the number of possible candidate 
-        (ambiguous) nodes in the graph.
+        计算当前词在词图中的候选结点数目
         """
+
         k = 0
-        while(self.graph.has_node((node, k))):
+        while self.graph.has_node((node, k)):
             k += 1
+
         return k
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def get_directed_context(self, node, k, dir='all', non_pos=False):
         """
         Returns the directed context of a given node, i.e. a list of word/POS of
@@ -620,10 +632,8 @@ class word_graph:
         # For all the sentence/position tuples
         for sid, off in self.graph.node[(node, k)]['info']:
 
-            # word/pos
-
+            # word/-/pos
             prev = self.sentence[sid][off-1][0].lower() + self.sep + self.sentence[sid][off-1][1]
-
             next = self.sentence[sid][off+1][0].lower() + self.sep + self.sentence[sid][off+1][1]
 
             if non_pos:
@@ -647,10 +657,7 @@ class word_graph:
         else:
             l_context.extend(r_context)
             return l_context
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def get_edge_weight(self, node1, node2):
         """
         Compute the weight of an edge *e* between nodes *node1* and *node2*. It 
@@ -867,9 +874,7 @@ class word_graph:
     
         # Returns the list of shortest paths
         return kshortestpaths
-    #-B-----------------------------------------------------------------------B-
-    
-    #-T-----------------------------------------------------------------------T-
+
     def get_compression(self, nb_candidates=50):
         """
         Searches all possible paths from **start** to **end** in the word graph,
@@ -902,83 +907,26 @@ class word_graph:
                 bisect.insort(fusions, (self.paths[i][1], sentence))
 
         return fusions
-    #-B-----------------------------------------------------------------------B-
 
-    #-T-----------------------------------------------------------------------T-
     def max_index(self, l):
-        """ Returns the index of the maximum value of a given list. """
+
+        """ 返回给的列表中最大元素的下标 """
 
         ll = len(l)
         if ll < 0:
             return None
         elif ll == 1:
             return 0
+
         max_val = l[0]
         max_ind = 0
         for z in range(1, ll):
             if l[z] > max_val:
                 max_val = l[z]
                 max_ind = z
+
         return max_ind
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
-    def compute_statistics(self):
-        """
-        This function iterates over the cluster's sentences and computes the
-        following statistics about each word:
-        
-        - term frequency (self.term_freq)
-        """
-
-        # 存放每个词，即包含该词的句子编号
-        terms = {}
-
-        # 存放每个词，以及该词在每个句子中的权重
-        weights = {}
-
-        # 遍历sentences
-        for i in range(self.length):
-        
-            # 依次处理句子中的(word, pos)
-            for token, POS, weight in self.sentence[i]:
-            
-                # generate the word/POS token
-                node = token.lower() + self.sep + POS  # node = word/-/pos
-                
-                # 以word/-/pos为key，value中存储这个词在包含该词的句子中的序号
-                if node not in terms:
-                    terms[node] = [i]
-                else:
-                    terms[node].append(i)
-
-                if weight == self.start or weight == self.stop:
-                    continue
-
-                # 以word/-/pos为key，value中存储这个词在包含该词的句子中的权重
-                if node not in weights:
-                    weights[node] = [float(weight)]
-                else:
-                    weights[node].append(float(weight))
-
-        # 遍历处理terms中的keys
-        for key in terms:
-            # 统计每个词的词频
-            self.term_freq[key] = len(terms[key])
-
-        # 遍历处理weights中的keys
-        for key in weights:
-            # 累加每个词的总权重
-            tw = 0.0
-            for w in weights[key]:
-                tw += w
-
-            self.term_weight[key] = tw
-    #-B-----------------------------------------------------------------------B-
-
-
-    #-T-----------------------------------------------------------------------T-
     def load_stopwords(self, path):
         """
         This function loads a stopword list from the *path* file and returns a 
@@ -995,20 +943,10 @@ class word_graph:
 
         # Return the set of stopwords
         return stopwords
-    #-B-----------------------------------------------------------------------B-
-    
 
-    #-T-----------------------------------------------------------------------T-
     def write_dot(self, dotfile):
         """ Outputs the word graph in dot format in the specified file. """
         nx.write_dot(self.graph, dotfile)
-    #-B-----------------------------------------------------------------------B-
-
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-# ] Ending word_graph class
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-
-
 
 #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
 # [ Class keyphrase_reranker
