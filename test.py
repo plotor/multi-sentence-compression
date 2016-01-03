@@ -1,7 +1,7 @@
 #! /usr/bin/python
 # -*- coding: utf-8 -*-
 
-import msc
+import event_msc
 
 if __name__ == '__main__':
 
@@ -18,6 +18,6 @@ if __name__ == '__main__':
                         'A/DT/1.541407 Russian/JJ/1.690761 warplane/NN/1.675197 has/VBZ/1.590734 crashed/VBN/1.63605 in/IN/1.570426 Syria/NNP/2.172298 near/IN/1.548048 the/DT/1.580312 Turkish/JJ/2.335849 border/NN/1.921725 on/IN/1.519171 24/CD/1.596672 November/NNP/1.541376 ,/PUNCT/1.550442 according/VBG/1.507866 to/TO/1.593164 local/JJ/1.559173 reports/NNS/1.598159 ./PUNCT/1.492299',
                         'Turkey/NNP/2.473707 apparently/RB/1.455763 shot/VBD/1.55875 down/RP/1.582315 a/DT/1.541407 Russian/JJ/1.690761 bomber/NN/1.76194 which/WDT/1.583918 they/PRP/1.549086 say/VBP/1.536582 was/VBD/1.508024 in/IN/1.570426 their/PRP$/1.48893 air/NN/1.761123 space/NN/1.53048 this/DT/1.557884 morning/NN/1.508587 ./PUNCT/1.492299']
 
-    results = msc.event_based_msc(weight_sentences, 10)
+    results = event_msc.event_based_msc(weight_sentences, 10)
     for result in results:
         print result,
