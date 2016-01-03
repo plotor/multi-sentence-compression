@@ -3,17 +3,10 @@
 
 import sys
 import os
-import logging
+
+from common import *
 import takahe
 import panda
-
-# 设置日志格式
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    datefmt='%a, %d %b %Y %H:%M:%S',
-    filename='../../../logs/msc.log',
-    filemode='w')
 
 
 def protogenesis_msc(sentences, output_sent_num = 50):

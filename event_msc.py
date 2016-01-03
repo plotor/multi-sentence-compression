@@ -6,16 +6,9 @@
 """
 
 import os
-import logging
-import panda
 
-# 设置日志格式
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    datefmt='%a, %d %b %Y %H:%M:%S',
-    filename='../../../logs/event_msc.log',
-    filemode='w')
+from common import *
+import panda
 
 
 def event_based_msc(sentences, output_sent_num = 50):
@@ -32,7 +25,7 @@ def event_based_msc(sentences, output_sent_num = 50):
     compresser = panda.WordGraph(sentences, nb_words=8, lang='en', punct_tag="PUNCT")
 
     # 获取压缩结果
-    candidates = compresser.get_compression(output_sent_num)
+    candidates = compresser.multi_compress(output_sent_num)
 
     # 将图保存成文本形式
     # compresser.write_dot('graph.dot')

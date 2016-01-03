@@ -807,7 +807,6 @@ class WordGraph:
                 # If found the end, adds to k-shortest paths 
                 if node == end:
 
-                    #-T-------------------------------------------------------T-
                     # --- Constraints on the shortest paths
 
                     # 1. Check if path contains at least one werb
@@ -857,8 +856,6 @@ class WordGraph:
                         kshortestpaths.append((path, weight))
                         sentence_container[raw_sentence] = 1
 
-                    #-B-------------------------------------------------------B-
-
                 else:
             
                     # test if node has already been visited
@@ -878,7 +875,8 @@ class WordGraph:
         # Returns the list of shortest paths
         return kshortestpaths
 
-    def get_compression(self, nb_candidates=50):
+    def multi_compress(self, nb_candidates=50):
+
         """
         Searches all possible paths from **start** to **end** in the word graph,
         removes paths containing no verb or shorter than *n* words. Returns an
@@ -951,10 +949,8 @@ class WordGraph:
         """ Outputs the word graph in dot format in the specified file. """
         nx.write_dot(self.graph, dotfile)
 
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-# [ Class keyphrase_reranker
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-class keyphrase_reranker:
+
+class KeyphraseReranker:
     """
     The *keyphrase_reranker* reranks a list of compression candidates according 
     to the keyphrases they contain. Keyphrases are extracted from the set of 
@@ -981,8 +977,7 @@ class keyphrase_reranker:
        Processing (EMNLP), 2004.
     """
 
-    #-T-----------------------------------------------------------------------T-
-    def __init__(self, sentence_list, nbest_compressions, lang="en", 
+    def __init__(self, sentence_list, nbest_compressions, lang="en",
                  patterns=[], stopwords=[], pos_separator='/'):
 
         """
@@ -1046,10 +1041,6 @@ class keyphrase_reranker:
         # 5. Cluster keyphrases to remove redundancy
         self.cluster_keyphrase_candidates()
 
-    #-B-----------------------------------------------------------------------B-
-
-
-    #-T-----------------------------------------------------------------------T-
     def build_graph(self, window=0):
         """
         Build a word graph from the list of sentences. Each node in the graph 
@@ -1118,10 +1109,7 @@ class keyphrase_reranker:
 
             # Replace sentence by the list of tuples
             self.sentences[i] = sentence
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def generate_candidates(self):
         """
         Function to generate the keyphrase candidates from the set of related 
@@ -1169,10 +1157,7 @@ class keyphrase_reranker:
                 # Add candidate
                 keyphrase = ' '.join(u[0] for u in candidate)
                 self.keyphrase_candidates[keyphrase] = candidate
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def is_a_candidate(self, keyphrase_candidate):
         """
         Function to check if a keyphrase candidate is a valid one according to 
@@ -1186,10 +1171,7 @@ class keyphrase_reranker:
                 return False
 
         return True
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def undirected_TextRank(self, d=0.85, f_conv=0.0001):
         """
         Implementation of the TextRank algorithm as described in 
@@ -1238,10 +1220,7 @@ class keyphrase_reranker:
                                    - current_node_scores[node_i])
 
                 max_node_difference = max(score_difference, score_difference)
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def score_keyphrase_candidates(self):
         """
         Function to compute the score of each keyphrase candidate according to 
@@ -1262,10 +1241,7 @@ class keyphrase_reranker:
 
             # Add score to the keyphrase candidates
             self.keyphrase_scores[keyphrase] = keyphrase_score
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def cluster_keyphrase_candidates(self):
         """
         Function to cluster keyphrase candidates and remove redundancy. A large 
@@ -1350,10 +1326,7 @@ class keyphrase_reranker:
             if not keyphrase in non_redundant_keyphrases:
                 del self.keyphrase_candidates[keyphrase]
                 del self.keyphrase_scores[keyphrase]
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def rerank_nbest_compressions(self):
         """
         Function that reranks the nbest compressions according to the keyphrases
@@ -1383,9 +1356,7 @@ class keyphrase_reranker:
                            (score, path) )
 
         return reranked_compressions
-    #-B-----------------------------------------------------------------------B-
 
-    #-T-----------------------------------------------------------------------T-
     def wordpos_to_tuple(self, word):
         """
         This function converts a word/POS to a (word, POS) tuple. The character
@@ -1401,10 +1372,7 @@ class keyphrase_reranker:
 
         # Return the tuple 
         return (token.lower(), POS)
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def tuple_to_wordpos(self, wordpos_tuple):
         """
         This function converts a (word, POS) tuple to word/POS. The character 
@@ -1413,10 +1381,3 @@ class keyphrase_reranker:
         
         # Return the word +delim+ POS
         return wordpos_tuple[0]+ self.pos_separator +wordpos_tuple[1]
-    #-B-----------------------------------------------------------------------B-
-
-
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-# ] Ending keyphrase_reranker class
-#~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~
-
