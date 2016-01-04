@@ -100,7 +100,9 @@ import codecs
 import os
 import re
 import bisect
+import Queue
 import networkx as nx
+from language_model.grammar import GrammarScorer
 
 
 class WordGraph:
@@ -121,7 +123,7 @@ class WordGraph:
       (default is PUNCT).
     """
 
-    def __init__(self, sentence_list, nb_words=8, lang="en", punct_tag="PUNCT", pos_separator='/'):
+    def __init__(self, sentence_list, ngram_modelpath, nb_words=8, lang="en", punct_tag="PUNCT", pos_separator='/'):
 
         self.sentence = list(sentence_list)
         """ A list of sentences provided by the user. """
@@ -146,6 +148,9 @@ class WordGraph:
 
         self.pos_separator = pos_separator
         """ The character (or string) used to separate a word and its Part of Speech tag """
+
+        # 临时屏蔽self.grammar_scorer = GrammarScorer(ngram_modelpath)
+        """ language model scorer """
 
         self.graph = nx.DiGraph()
         """ The directed graph used for fusion. """
@@ -623,6 +628,7 @@ class WordGraph:
         return k
 
     def get_directed_context(self, node, k, dir='all', non_pos=False):
+
         """
         Returns the directed context of a given node, i.e. a list of word/POS of
         the left or right neighboring nodes in the graph. The function takes 
@@ -874,6 +880,28 @@ class WordGraph:
     
         # Returns the list of shortest paths
         return kshortestpaths
+
+    def event_guided_multi_compress(self):
+
+        """
+        基于事件指导的多语句压缩
+        利用图的广度优先搜索来得到路径，搜索过程中考虑如下因素：
+        1.路径得分
+        2.语言模型得分
+
+        :return:
+        """
+
+    def __pruning_bfs(self, graph, source, queue):
+
+        """
+        剪枝广度优先搜素
+        :param graph:
+        :param source:
+        :param queque:
+        :return:
+        """
+
 
     def multi_compress(self, nb_candidates=50):
 

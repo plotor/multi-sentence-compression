@@ -8,7 +8,7 @@
 import os
 
 from common import *
-import panda
+import panda.panda_plus as pp
 
 
 def event_based_msc(sentences, output_sent_num = 50):
@@ -22,7 +22,7 @@ def event_based_msc(sentences, output_sent_num = 50):
 
     # 构建词图，并执行压缩
     # 忽略词数小于8的句子
-    compresser = panda.WordGraph(sentences, nb_words=8, lang='en', punct_tag="PUNCT")
+    compresser = pp.WordGraph(sentences, ngram_modelpath=r'E:\nlp\Language Model\giga_3gram.lm', nb_words=8, lang='en', punct_tag="PUNCT")
 
     # 获取压缩结果
     candidates = compresser.multi_compress(output_sent_num)
