@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 
 import sys
+import re
 from common import *
 
 
@@ -23,8 +24,8 @@ class GrammarScorer(object):
 
         score = 0.0
 
-        sentence = '<s> ' + sentence + ' </s>'
-        strs = sentence.split('\s+')
+        sent = '<s> ' + sentence + ' </s>'
+        strs = re.split('\s+', sent)
 
         for i in range(2, len(strs)):
 
@@ -41,7 +42,7 @@ class GrammarScorer(object):
             if (w3 not in self.ngram_model) and ('<s>' != w3) and ('</s>' != w3):
                 w3 = '<unk>'
 
-            score += float(10**self.__extract_ngram_score(w1 + '' + w2 + '' + w3))
+            score += float(10**self.__extract_ngram_score(w1 + ' ' + w2 + ' ' + w3))
 
         return score
 
@@ -53,7 +54,7 @@ class GrammarScorer(object):
         :return:
         """
 
-        words = wordstr.split('\s+')
+        words = re.split('\s+', wordstr)
 
         if len(words) == 3:
 
@@ -89,11 +90,11 @@ class GrammarScorer(object):
 
         logging.info("loading ngram model...")
 
-        with open(self.modelpath, mode='r') as modelfile:
+        with open(self.modelpath, mode = 'r') as modelfile:
 
             for line in modelfile:
 
-                strs = line.strip().split('\t')
+                strs = re.split('\t', line.strip())
 
                 if len(strs) < 2:
                     logging.warn('The elements count is less than 2, ignore line[' + line + ']')
