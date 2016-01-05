@@ -21,7 +21,9 @@ if __name__ == '__main__':
 
     wordgraph = WordGraph(weight_sentences, ngram_modelpath=r'E:\nlp\Language Model\giga_3gram.lm', nb_words=8, lang='en', punct_tag="PUNCT")
 
-    wordgraph.event_guided_multi_compress()
+    wordgraph.write_dot(r'E:\dev_workspace\tmp\test.dot')
+
+    # wordgraph.event_guided_multi_compress()
 
     '''
     results = event_msc.event_based_msc(weight_sentences, 10)

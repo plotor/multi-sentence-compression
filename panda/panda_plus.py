@@ -889,24 +889,26 @@ class WordGraph:
         :return:
         """
 
-    def __pruning_bfs(self, graph, queue_size = 16):
+    def __pruning_bfs(self, graph, lambd, max_neighbors = 16):
 
         """
         剪枝广度优先搜素
         :param graph:
-        :param source:
-        :param queque:
+        :param lambd:
+        :param max_neighbors:
         :return:
         """
 
-        start = (self.start + self.sep + self.stop, 0)
+        # 起始结点
+        start = (self.start + self.sep + self.start, 0)
 
-        queue = Queue.Queue(maxsize=queue_size)
+        # 终止结点
+        stop = (self.stop + self.sep + self.stop, 0)
 
-        # 所有起始结点一次性入队，并标记为已经访问
-        start_nodes = self.graph.neighbors(start)
-        queue.put(start_nodes)
-        visited = set(start_nodes)
+        queue = Queue.Queue()
+
+        # 起始结点入栈
+        queue.put(start)
 
         while not queue.empty():
 
@@ -916,10 +918,15 @@ class WordGraph:
             # 获取当前结点的邻接后继结点
             pos_neighbors = self.graph.neighbors(node)
 
+            # 依次处理每个后继结点
             for pos_neighbor in pos_neighbors:
 
-                # 依次处理每个后继结点
-                pass
+                # 获取两个结点之间边的权重（越小越好）
+                edge_weight = self.graph.get_edge_data(node, pos_neighbor, 'weight')
+
+                # 计算当前结点与之前语句构成的新的语句的语言模型得分
+
+
 
 
     def multi_compress(self, nb_candidates=50):
