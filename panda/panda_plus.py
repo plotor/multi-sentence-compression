@@ -205,7 +205,7 @@ class WordGraph:
             words = self.sentence[i].split(' ')
 
             # 创建一个空的词容器（word, pos, weight）
-            container = [(self.start, self.start, self.start)]
+            container = [(self.start, self.start, 1.0)]
 
             # 循环处理句子中的每个词
             for w in words:
@@ -216,10 +216,10 @@ class WordGraph:
                 token, pos, weight = m.group(1), m.group(2), m.group(3)
 
                 # 循环添加词
-                container.append((token.lower(), pos, weight))
+                container.append((token.lower(), pos, float(weight)))
                     
             # 添加尾结点
-            container.append((self.stop, self.stop, self.stop))
+            container.append((self.stop, self.stop, 1.0))
 
             self.sentence[i] = container
 
@@ -250,14 +250,11 @@ class WordGraph:
                 else:
                     terms[node].append(i)
 
-                if weight == self.start or weight == self.stop:
-                    continue
-
                 # 以word/-/pos为key，value中存储该词在各个句子中的权重
                 if node not in weights:
-                    weights[node] = [float(weight)]
+                    weights[node] = [weight]
                 else:
-                    weights[node].append(float(weight))
+                    weights[node].append(weight)
 
         # 遍历处理terms中的keys
         for key in terms:
@@ -602,20 +599,13 @@ class WordGraph:
                 self.graph.add_edge(mapping[j-1], mapping[j])
             '''
 
-            # 连接start结点与其后继结点
-            self.graph.add_edge(mapping[0], mapping[1])
-
             '''
             新的加边方法：
             通过为当前结点与其所有后继结点加边来解决边的稀疏性问题
-            忽略'-start-'和'-stop-'
             '''
-            for pre in range(1, len(mapping) - 3):
-                for pos in range(pre + 1, len(mapping) - 2):
+            for pre in range(0, len(mapping) - 1):
+                for pos in range(pre + 1, len(mapping)):
                     self.graph.add_edge(mapping[pre], mapping[pos])
-
-            # 连接最后一个结点与end结点
-            self.graph.add_edge(mapping[len(mapping) - 2], mapping[len(mapping) - 1])
 
         # 计算每条边对应的权值
         for node1, node2 in self.graph.edges_iter():
@@ -689,17 +679,6 @@ class WordGraph:
         基于被连接的两个结点的权值来计算当前边的权重
         A node is a tuple of ('word/POS', unique_id).
         """
-
-        start_node = self.start + self.sep + self.start
-        stop_node = self.stop + self.sep + self.stop
-
-        print node1, node2
-
-        if start_node == node1[0] or stop_node == node1[0]:
-            return 0.0
-
-        if start_node == node2[0] or stop_node == node2[0]:
-            return 0.0
 
         # Get the list of (sentence_id, pos_in_sentence) for node1
         info1 = self.graph.node[node1]['info']
@@ -910,7 +889,7 @@ class WordGraph:
         :return:
         """
 
-    def __pruning_bfs(self, graph, source, queue_size = 16):
+    def __pruning_bfs(self, graph, queue_size = 16):
 
         """
         剪枝广度优先搜素
@@ -920,13 +899,14 @@ class WordGraph:
         :return:
         """
 
+        start = (self.start + self.sep + self.stop, 0)
+
         queue = Queue.Queue(maxsize=queue_size)
 
-        # 起始结点入队
-        queue.put(source)
-
-        # 初始化已经访问的元素集合
-        visited = set([source])
+        # 所有起始结点一次性入队，并标记为已经访问
+        start_nodes = self.graph.neighbors(start)
+        queue.put(start_nodes)
+        visited = set(start_nodes)
 
         while not queue.empty():
 
@@ -935,6 +915,11 @@ class WordGraph:
 
             # 获取当前结点的邻接后继结点
             pos_neighbors = self.graph.neighbors(node)
+
+            for pos_neighbor in pos_neighbors:
+
+                # 依次处理每个后继结点
+                pass
 
 
     def multi_compress(self, nb_candidates=50):
