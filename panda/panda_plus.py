@@ -602,13 +602,20 @@ class WordGraph:
                 self.graph.add_edge(mapping[j-1], mapping[j])
             '''
 
+            # 连接start结点与其后继结点
+            self.graph.add_edge(mapping[0], mapping[1])
+
             '''
             新的加边方法：
             通过为当前结点与其所有后继结点加边来解决边的稀疏性问题
+            忽略'-start-'和'-stop-'
             '''
-            for pre in range(0, len(mapping) - 1):
-                for pos in range(pre + 1, len(mapping)):
+            for pre in range(1, len(mapping) - 3):
+                for pos in range(pre + 1, len(mapping) - 2):
                     self.graph.add_edge(mapping[pre], mapping[pos])
+
+            # 连接最后一个结点与end结点
+            self.graph.add_edge(mapping[len(mapping) - 2], mapping[len(mapping) - 1])
 
         # 计算每条边对应的权值
         for node1, node2 in self.graph.edges_iter():
@@ -682,6 +689,17 @@ class WordGraph:
         基于被连接的两个结点的权值来计算当前边的权重
         A node is a tuple of ('word/POS', unique_id).
         """
+
+        start_node = self.start + self.sep + self.start
+        stop_node = self.stop + self.sep + self.stop
+
+        print node1, node2
+
+        if start_node == node1[0] or stop_node == node1[0]:
+            return 0.0
+
+        if start_node == node2[0] or stop_node == node2[0]:
+            return 0.0
 
         # Get the list of (sentence_id, pos_in_sentence) for node1
         info1 = self.graph.node[node1]['info']
@@ -892,7 +910,7 @@ class WordGraph:
         :return:
         """
 
-    def __pruning_bfs(self, graph, source, queue):
+    def __pruning_bfs(self, graph, source, queue_size = 16):
 
         """
         剪枝广度优先搜素
@@ -901,6 +919,22 @@ class WordGraph:
         :param queque:
         :return:
         """
+
+        queue = Queue.Queue(maxsize=queue_size)
+
+        # 起始结点入队
+        queue.put(source)
+
+        # 初始化已经访问的元素集合
+        visited = set([source])
+
+        while not queue.empty():
+
+            # 出队
+            node = queue.get()
+
+            # 获取当前结点的邻接后继结点
+            pos_neighbors = self.graph.neighbors(node)
 
 
     def multi_compress(self, nb_candidates=50):
