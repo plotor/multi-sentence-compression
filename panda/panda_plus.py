@@ -95,6 +95,7 @@
     November 20, 1948. (Wikipedia, http://en.wikipedia.org/wiki/takahe)  
 """
 
+import sys
 import math
 import codecs
 import os
@@ -102,8 +103,12 @@ import re
 import bisect
 import Queue
 import networkx as nx
-from language_model.grammar import GrammarScorer
 
+from language_model.grammar import GrammarScorer
+from common.logger import logging
+
+# 修改递归深度
+sys.setrecursionlimit(1000000)
 
 class WordGraph:
 
@@ -149,7 +154,7 @@ class WordGraph:
         self.pos_separator = pos_separator
         """ The character (or string) used to separate a word and its Part of Speech tag """
 
-        # 临时屏蔽self.grammar_scorer = GrammarScorer(ngram_modelpath)
+        # self.grammar_scorer = GrammarScorer(ngram_modelpath)
         """ language model scorer """
 
         self.graph = nx.DiGraph()
@@ -285,7 +290,7 @@ class WordGraph:
         对于2、3、4，如果具有多个候选结点，则选择上下文和词图中的邻接结点覆盖度最大的结点。
 
         - 为词图添加边
-        
+
         词图中的每个结点是一个元组('word/POS', id)，同时附加一个info信息，info为一个列表，
         其中存储每个包含该词的句子sentence_id和在句子中的位置position_in_sentence
 
@@ -310,7 +315,7 @@ class WordGraph:
                 # 如果是停用词或者标点，则跳过
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
-            
+
                 # 结点标识：word/-/pos
                 node = token.lower() + self.sep + pos
 
@@ -334,7 +339,7 @@ class WordGraph:
                     for sid, pos_s in self.graph.node[(node, 0)]['info']:
                         # sid为node所在句子id, pos_s为该词在句子中的位置
                         ids.append(sid)
-                    
+
                     # 如果该结点之前没有记录，则更新该结点（更新info的值）
                     if i not in ids:
                         self.graph.node[(node, 0)]['info'].append((i, j))
@@ -351,7 +356,7 @@ class WordGraph:
             for j in range(sentence_len):
 
                 token, pos, weight = self.sentence[i][j]
-                
+
                 # 如果是停用词或者标点，则跳过
                 if token in self.stopwords or re.search('(?u)^\W$', token):
                     continue
@@ -361,20 +366,20 @@ class WordGraph:
 
                     # 结点标识：word/-/pos
                     node = token.lower() + self.sep + pos
-                    
+
                     # 创建邻接结点的标识
                     prev_token, prev_pos, prev_weight = self.sentence[i][j-1]  # 前一个词的word和pos
                     next_token, next_pos, next_weight = self.sentence[i][j+1]  # 后一个词的word和pos
                     prev_node = prev_token.lower() + self.sep + prev_pos
                     next_node = next_token.lower() + self.sep + next_pos
-                    
+
                     # 计算图中可能的候选结点的个数
                     k = self.ambiguous_nodes(node)
 
                     # 寻找候选结点中具有最大上下文覆盖度或最大频度的结点
                     ambinode_overlap = []
                     ambinode_frequency = []
-            
+
                     # 依次处理每个候选结点
                     for l in range(k):
 
@@ -383,9 +388,9 @@ class WordGraph:
 
                         # 获取结点的下文
                         r_context = self.get_directed_context(node, l, 'right')
-                        
+
                         # 计算对应node在相应上下文中出现的总次数
-                        val = l_context.count(prev_node) 
+                        val = l_context.count(prev_node)
                         val += r_context.count(next_node)
 
                         # 保存每个候选结点的上下文覆盖度
@@ -393,38 +398,38 @@ class WordGraph:
 
                         # 保存每个候选结点的频度
                         ambinode_frequency.append(len(self.graph.node[(node, l)]['info']))
-                
+
                     # 寻找最佳候选结点（避免环路）
                     found = False
                     selected = 0
                     while not found:
-                    
+
                         # 覆盖度最大的结点下标
                         selected = self.max_index(ambinode_overlap)
 
                         # 如果覆盖度不能区分，则用最大的频度
                         if ambinode_overlap[selected] == 0:
                             selected = self.max_index(ambinode_frequency)
-                        
+
                         # 获取句子对应的ID
                         ids = []
                         for sid, p in self.graph.node[(node, selected)]['info']:
                             ids.append(sid)
-                        
+
                         # 避免环路
                         if i not in ids:
                             found = True
                             break
-            
+
                         # Remove the candidate from the lists
                         else:
                             del ambinode_overlap[selected]
                             del ambinode_frequency[selected]
-                            
+
                         # Avoid endless loops
                         if len(ambinode_overlap) == 0:
                             break
-                    
+
                     # 找到不为当前句子的最佳候选结点
                     if found:
                         self.graph.node[(node, selected)]['info'].append((i, j))
@@ -434,7 +439,7 @@ class WordGraph:
                     else:
                         self.graph.add_node((node, k), info=[(i, j)], label=token.lower())
                         mapping[j] = (node, k)
-            
+
             # -------------------------------------------------------------------
             # 3. 处理停用词
             # -------------------------------------------------------------------
@@ -448,7 +453,7 @@ class WordGraph:
 
                 # 结点标识：word/-/pos
                 node = token.lower() + self.sep + pos
-                    
+
                 # 获取候选结点的数目
                 k = self.ambiguous_nodes(node)
 
@@ -460,10 +465,10 @@ class WordGraph:
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
-   
+
                 # Else find the node with overlap in context or create one
                 else:
-                    
+
                     # Create the neighboring nodes identifiers
                     prev_token, prev_pos, prev_weight = self.sentence[i][j-1]
                     next_token, next_pos, next_weight = self.sentence[i][j+1]
@@ -471,7 +476,7 @@ class WordGraph:
                     next_node = next_token.lower() + self.sep + next_pos
 
                     ambinode_overlap = []
-            
+
                     # For each ambiguous node
                     for l in range(k):
 
@@ -479,23 +484,23 @@ class WordGraph:
                         # boolean indicates to consider only non stopwords
                         l_context = self.get_directed_context(node, l, 'left', True)
                         r_context = self.get_directed_context(node, l, 'right', True)
-                        
+
                         # Compute the (directed) context sum
-                        val = l_context.count(prev_node) 
+                        val = l_context.count(prev_node)
                         val += r_context.count(next_node)
 
                         # Add the count of the overlapping words
                         ambinode_overlap.append(val)
-                    
+
                     # Get best overlap candidate
                     selected = self.max_index(ambinode_overlap)
-                
+
                     # Get the sentences id of the best candidate node
                     ids = []
                     for sid, pos_s in self.graph.node[(node, selected)]['info']:
                         ids.append(sid)
 
-                    # Update the node in the graph if not same sentence and 
+                    # Update the node in the graph if not same sentence and
                     # there is at least one overlap in context
                     if i not in ids and ambinode_overlap[selected] > 0:
 
@@ -526,7 +531,7 @@ class WordGraph:
 
                 # 结点标识：word/-/pos
                 node = token.lower() + self.sep + pos
-                    
+
                 # 计算相似结点的数目
                 k = self.ambiguous_nodes(node)
 
@@ -538,10 +543,10 @@ class WordGraph:
 
                     # Mark the word as mapped to k
                     mapping[j] = (node, 0)
-   
+
                 # Else find the node with overlap in context or create one
                 else:
-                    
+
                     # Create the neighboring nodes identifiers
                     prev_token, prev_pos, prev_weight = self.sentence[i][j-1]
                     next_token, next_pos, next_weight = self.sentence[i][j+1]
@@ -549,30 +554,30 @@ class WordGraph:
                     next_node = next_token.lower() + self.sep + next_pos
 
                     ambinode_overlap = []
-            
+
                     # For each ambiguous node
                     for l in range(k):
 
                         # Get the immediate context words of the nodes
                         l_context = self.get_directed_context(node, l, 'left')
                         r_context = self.get_directed_context(node, l, 'right')
-                        
+
                         # Compute the (directed) context sum
-                        val = l_context.count(prev_node) 
+                        val = l_context.count(prev_node)
                         val += r_context.count(next_node)
 
                         # Add the count of the overlapping words
                         ambinode_overlap.append(val)
-                    
+
                     # Get best overlap candidate
                     selected = self.max_index(ambinode_overlap)
-                
+
                     # Get the sentences id of the best candidate node
                     ids = []
                     for sid, pos_s in self.graph.node[(node, selected)]['info']:
                         ids.append(sid)
 
-                    # Update the node in the graph if not same sentence and 
+                    # Update the node in the graph if not same sentence and
                     # there is at least one overlap in context
                     if i not in ids and ambinode_overlap[selected] > 1:
 
@@ -593,24 +598,98 @@ class WordGraph:
             # -------------------------------------------------------------------
             # 4. 添加边
             # -------------------------------------------------------------------
-            '''
-            原始加边的方法
+
+            # 1.添加基础边
             for j in range(1, len(mapping)):
                 self.graph.add_edge(mapping[j-1], mapping[j])
-            '''
 
-            '''
-            新的加边方法：
-            通过为当前结点与其所有后继结点加边来解决边的稀疏性问题
+            # 2.丰富边：通过为当前结点与其所有后继结点加边来解决边的稀疏性问题，确保无环
             '''
             for pre in range(0, len(mapping) - 1):
                 for pos in range(pre + 1, len(mapping)):
                     self.graph.add_edge(mapping[pre], mapping[pos])
+            '''
+
+        '''
+        解决边的稀疏性问题
+        遍历处理所有结点，保证无环的前提下为当前结点与其所有后继结点之间加边
+        '''
+        # 获取所有的结点
+        node_list = self.graph.nodes(data=False)
+
+        successors_collection = {}
+
+        for nl in node_list:
+
+            successors = dict(nx.bfs_successors(self.graph, nl))
+
+            for key in successors:
+
+                successors_collection[key] = successors[key]
+
+        # 重新组织的后继结点集合
+        reorganized_successors = {}
+
+        for nl in node_list:
+
+            successor_set = set([])
+
+            self.__all_successors(successors_collection, nl, successor_set)
+
+            reorganized_successors[nl] = successor_set
+
+        for nl in node_list:
+
+            if nl not in reorganized_successors:
+                continue
+
+            successor_set = reorganized_successors
+
+            for successor in successor_set:
+
+                # 如果当前两个结点之间有边，则跳过
+                if self.graph.has_edge(nl, successor):
+                    continue
+
+                # 当前结点之间没有边，尝试添加边，确保无环
+                else:
+                    self.graph.add_edge(nl, successor)
+
+                    # 判断是否有环
+                    try:
+
+                        # find_cycle在无环的情况下会抛出异常
+                        edges = nx.find_cycle(self.graph, orientation='original')
+
+                        if len(edges) > 0:
+
+                            # 有环
+                            self.graph.remove_edge(nl, successor)
+
+                    except:
+
+                        # 无环
+                        pass
 
         # 计算每条边对应的权值
         for node1, node2 in self.graph.edges_iter():
+
             edge_weight = self.cal_edge_weight(node1, node2)
+
             self.graph.add_edge(node1, node2, weight=edge_weight)
+
+    def __all_successors(self, succseeor_collection, key, successors):
+
+        if key not in succseeor_collection:
+            return
+
+        for node in succseeor_collection[key]:
+
+            if node in successors:
+                continue
+            else:
+                successors.add(node)
+                self.__all_successors(succseeor_collection, node, successors)
 
     def ambiguous_nodes(self, node):
 
@@ -889,15 +968,23 @@ class WordGraph:
         :return:
         """
 
-    def __pruning_bfs(self, graph, lambd, max_neighbors = 16):
+        sentences = self.__pruning_bfs(1.0, max_neighbors=4)
+
+        for i in range(len(sentences)):
+
+            print sentences[i]
+
+    def __pruning_bfs(self, lambd, max_neighbors):
 
         """
         剪枝广度优先搜素
-        :param graph:
         :param lambd:
         :param max_neighbors:
         :return:
         """
+
+        # 存放搜索到的路径
+        results = []
 
         # 起始结点
         start = (self.start + self.sep + self.start, 0)
@@ -908,26 +995,61 @@ class WordGraph:
         queue = Queue.Queue()
 
         # 起始结点入栈
-        queue.put(start)
+        queue.put([start])
 
         while not queue.empty():
 
             # 出队
-            node = queue.get()
+            phrase = queue.get()
+
+            # 获取当前短语的最后一个单词
+            node = phrase[len(phrase) - 1]
+
+            # 将当前短语转换成字符串形式
+            str_phrase = ''
+
+            for nodeflag, num in phrase:
+
+                str_phrase += nodeflag.split(self.sep)[0] + ' '
 
             # 获取当前结点的邻接后继结点
             pos_neighbors = self.graph.neighbors(node)
+
+            if len(pos_neighbors) == 0:
+
+                logging.info(str_phrase)
+
+                # 已经是最后一个结点
+                results.append(phrase)
+
+                continue
+
+            # 每个后继结点的综合得分（考虑路径得分和语言模型得分）
+            neighbor_weight = {}
 
             # 依次处理每个后继结点
             for pos_neighbor in pos_neighbors:
 
                 # 获取两个结点之间边的权重（越小越好）
-                edge_weight = self.graph.get_edge_data(node, pos_neighbor, 'weight')
+                edge_weight = self.graph.get_edge_data(node, pos_neighbor)['weight']
 
                 # 计算当前结点与之前语句构成的新的语句的语言模型得分
+                fluency_weight = 1.0  # self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
 
+                # 计算当前后继结点的综合得分
+                neighbor_weight[pos_neighbor] = 1 / edge_weight + lambd * fluency_weight
 
+            # 将后继结点按综合得分由大到小进行排序
+            sort_neighbor_weight = sorted(neighbor_weight.iteritems(), key=lambda neighbor_weight : neighbor_weight[1], reverse=True)
 
+            # 选择指定数目的结点如队列
+            for i in range(min(max_neighbors, len(sort_neighbor_weight))):
+
+                # 综合得分最高的max_neighbors个邻接后继结点如队列
+                new_phrase = phrase + [sort_neighbor_weight[i][0]]
+                queue.put(new_phrase)
+
+        return results
 
     def multi_compress(self, nb_candidates=50):
 
