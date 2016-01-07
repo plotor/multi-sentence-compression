@@ -657,26 +657,20 @@ class WordGraph:
 
                     # 判断是否有环
                     try:
-
                         # find_cycle在无环的情况下会抛出异常
                         edges = nx.find_cycle(self.graph, orientation='original')
 
                         if len(edges) > 0:
-
                             # 有环
                             self.graph.remove_edge(nl, successor)
 
                     except:
-
                         # 无环
                         pass
 
         # 计算每条边对应的权值
         for node1, node2 in self.graph.edges_iter():
-
-            edge_weight = self.cal_edge_weight(node1, node2)
-
-            self.graph.add_edge(node1, node2, weight=edge_weight)
+            self.graph.add_edge(node1, node2, weight=self.cal_edge_weight(node1, node2))
 
     def __all_successors(self, succseeor_collection, key, successors):
 
@@ -838,7 +832,11 @@ class WordGraph:
             else:
                 diff.append(0.0)
 
-        return ((weight1 + weight2) / sum(diff)) / (weight1 * weight2)
+        sum_diff = sum(diff)
+        if sum_diff == 0:
+            return 0.0
+
+        return ((weight1 + weight2) / sum_diff) / (weight1 * weight2)
 
     def k_shortest_paths(self, start, end, k=10):
         """
@@ -972,7 +970,7 @@ class WordGraph:
 
         for i in range(len(sentences)):
 
-            print sentences[i]
+            logging.info(sentences[i])
 
     def __pruning_bfs(self, lambd, max_neighbors):
 
@@ -1005,23 +1003,25 @@ class WordGraph:
             # 获取当前短语的最后一个单词
             node = phrase[len(phrase) - 1]
 
+            if stop == node:
+                # 已经是最后一个结点
+                results.append(phrase)
+                continue
+
             # 将当前短语转换成字符串形式
             str_phrase = ''
 
             for nodeflag, num in phrase:
-
                 str_phrase += nodeflag.split(self.sep)[0] + ' '
+
+            logging.info(str_phrase)
 
             # 获取当前结点的邻接后继结点
             pos_neighbors = self.graph.neighbors(node)
 
             if len(pos_neighbors) == 0:
-
-                logging.info(str_phrase)
-
                 # 已经是最后一个结点
                 results.append(phrase)
-
                 continue
 
             # 每个后继结点的综合得分（考虑路径得分和语言模型得分）
@@ -1032,6 +1032,9 @@ class WordGraph:
 
                 # 获取两个结点之间边的权重（越小越好）
                 edge_weight = self.graph.get_edge_data(node, pos_neighbor)['weight']
+
+                if edge_weight == 0:
+                    continue
 
                 # 计算当前结点与之前语句构成的新的语句的语言模型得分
                 fluency_weight = 1.0  # self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
