@@ -596,73 +596,21 @@ class WordGraph:
                         mapping[j] = (node, k)
 
             # -------------------------------------------------------------------
-            # 4. 添加边
+            # 4. 添加边，通过为当前结点与其所有后继结点加边来解决边的稀疏性问题，确保无环
             # -------------------------------------------------------------------
-
-            # 1.添加基础边
-            for j in range(1, len(mapping)):
-                self.graph.add_edge(mapping[j-1], mapping[j])
-
-            # 2.丰富边：通过为当前结点与其所有后继结点加边来解决边的稀疏性问题，确保无环
-            '''
             for pre in range(0, len(mapping) - 1):
+
                 for pos in range(pre + 1, len(mapping)):
+
                     self.graph.add_edge(mapping[pre], mapping[pos])
-            '''
 
-        '''
-        解决边的稀疏性问题
-        遍历处理所有结点，保证无环的前提下为当前结点与其所有后继结点之间加边
-        '''
-        # 获取所有的结点
-        node_list = self.graph.nodes(data=False)
-
-        successors_collection = {}
-
-        for nl in node_list:
-
-            successors = dict(nx.bfs_successors(self.graph, nl))
-
-            for key in successors:
-
-                successors_collection[key] = successors[key]
-
-        # 重新组织的后继结点集合
-        reorganized_successors = {}
-
-        for nl in node_list:
-
-            successor_set = set([])
-
-            self.__all_successors(successors_collection, nl, successor_set)
-
-            reorganized_successors[nl] = successor_set
-
-        for nl in node_list:
-
-            if nl not in reorganized_successors:
-                continue
-
-            successor_set = reorganized_successors
-
-            for successor in successor_set:
-
-                # 如果当前两个结点之间有边，则跳过
-                if self.graph.has_edge(nl, successor):
-                    continue
-
-                # 当前结点之间没有边，尝试添加边，确保无环
-                else:
-                    self.graph.add_edge(nl, successor)
-
-                    # 判断是否有环
+                    # 判定是否有环
                     try:
                         # find_cycle在无环的情况下会抛出异常
-                        edges = nx.find_cycle(self.graph, orientation='original')
+                        nx.find_cycle(self.graph, source=mapping[pre], orientation='original')
 
-                        if len(edges) > 0:
-                            # 有环
-                            self.graph.remove_edge(nl, successor)
+                        # 没有异常，说明有环，移出刚刚添加的边
+                        self.graph.remove_edge(mapping[pre], mapping[pos])
 
                     except:
                         # 无环
@@ -768,7 +716,7 @@ class WordGraph:
         if key in self.term_weight:
             weight1 = self.term_weight[key]
         else:
-            weight1 = 0.0
+            return 0.0
         
         # Get the frequency of node2 in cluster
         # freq2 = self.graph.degree(node2)
@@ -779,10 +727,7 @@ class WordGraph:
         if key in self.term_weight:
             weight2 = self.term_weight[key]
         else:
-            weight2 = 0.0
-
-        if weight1 == 0 or weight2 == 0:
-            return 0
+            return 0.0
 
         # 公式中的diff函数
         diff = []
@@ -955,7 +900,7 @@ class WordGraph:
         # Returns the list of shortest paths
         return kshortestpaths
 
-    def event_guided_multi_compress(self):
+    def event_guided_multi_compress(self, lambd, max_neighbors, queue_size, sentence_count):
 
         """
         基于事件指导的多语句压缩
@@ -966,18 +911,44 @@ class WordGraph:
         :return:
         """
 
-        sentences = self.__pruning_bfs(1.0, max_neighbors=4)
+        sentences = self.__pruning_bfs(lambd, max_neighbors, queue_size)
 
+        # 计算句子的综合得分
         for i in range(len(sentences)):
 
-            logging.info(sentences[i])
+            # 当前句子
+            sentence = sentences[i]
 
-    def __pruning_bfs(self, lambd, max_neighbors):
+            # 路径得分
+            path_weight = 0.0
+            # 句子：字符串形式
+            str_sentence = ''
+
+            for j in range(1, len(sentence) - 2):
+
+                # 路径得分
+                path_weight += self.graph.get_edge_data(sentence[j], sentence[j + 1])['weight']
+
+                str_sentence += sentence[j][0].split(self.sep)[0] + ' '
+
+            # 语言模型得分
+            fluency_weight = 1.0 # self.grammar_scorer.cal_fluency(str_sentence)
+
+            # 依次计算每个句子的综合得分，并选择指定数目的句子进行封装返回
+            sentences[i] = (len(sentence)/path_weight + lambd * fluency_weight, str_sentence.strip())
+
+        # 按照得分从大到小进行排序，并选择指定的数目进行返回
+        sentences.sort(lambda x,y:cmp(x[0],y[0]), reverse=True)
+
+        return sentences[0: sentence_count]
+
+    def __pruning_bfs(self, lambd, max_neighbors, queue_size):
 
         """
         剪枝广度优先搜素
         :param lambd:
         :param max_neighbors:
+        :param queue_size:
         :return:
         """
 
@@ -990,7 +961,7 @@ class WordGraph:
         # 终止结点
         stop = (self.stop + self.sep + self.stop, 0)
 
-        queue = Queue.Queue()
+        queue = Queue.Queue(queue_size)
 
         # 起始结点入栈
         queue.put([start])
@@ -1004,8 +975,12 @@ class WordGraph:
             node = phrase[len(phrase) - 1]
 
             if stop == node:
+
                 # 已经是最后一个结点
-                results.append(phrase)
+                if len(phrase) >= 8:
+                    # 只选择长度在8个单词以上的句子
+                    results.append(phrase)
+
                 continue
 
             # 将当前短语转换成字符串形式
@@ -1014,15 +989,10 @@ class WordGraph:
             for nodeflag, num in phrase:
                 str_phrase += nodeflag.split(self.sep)[0] + ' '
 
-            logging.info(str_phrase)
+            logging.info('results(' + str(len(results)) + ') queue(' + str(queue.qsize()) + ') -- ' + str_phrase)
 
             # 获取当前结点的邻接后继结点
             pos_neighbors = self.graph.neighbors(node)
-
-            if len(pos_neighbors) == 0:
-                # 已经是最后一个结点
-                results.append(phrase)
-                continue
 
             # 每个后继结点的综合得分（考虑路径得分和语言模型得分）
             neighbor_weight = {}
@@ -1037,7 +1007,7 @@ class WordGraph:
                     continue
 
                 # 计算当前结点与之前语句构成的新的语句的语言模型得分
-                fluency_weight = 1.0  # self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
+                fluency_weight = 1.0 # self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
 
                 # 计算当前后继结点的综合得分
                 neighbor_weight[pos_neighbor] = 1 / edge_weight + lambd * fluency_weight
@@ -1051,6 +1021,9 @@ class WordGraph:
                 # 综合得分最高的max_neighbors个邻接后继结点如队列
                 new_phrase = phrase + [sort_neighbor_weight[i][0]]
                 queue.put(new_phrase)
+
+                if queue.full():
+                    break
 
         return results
 
