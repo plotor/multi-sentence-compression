@@ -19,8 +19,12 @@ if __name__ == '__main__':
                         'Turkey/NNP/2.473707 apparently/RB/1.455763 shot/VBD/1.55875 down/RP/1.582315 a/DT/1.541407 Russian/JJ/1.690761 bomber/NN/1.76194 which/WDT/1.583918 they/PRP/1.549086 say/VBP/1.536582 was/VBD/1.508024 in/IN/1.570426 their/PRP$/1.48893 air/NN/1.761123 space/NN/1.53048 this/DT/1.557884 morning/NN/1.508587 ./PUNCT/1.492299']
 
 
-    wordgraph = WordGraph(weight_sentences, ngram_modelpath=r'E:\nlp\Language Model\giga_3gram.lm', nb_words=8, lang='en', punct_tag="PUNCT")
+    wordgraph = WordGraph(weight_sentences, ngram_modelpath=r'E:\dev_workspace\experiment\nlp\language_model\giga_3gram.lm', nb_words=8, lang='en', punct_tag="PUNCT")
 
     # wordgraph.write_dot(r"E:\dev_workspace\tmp\test.dot")
 
-    wordgraph.event_guided_multi_compress()
+    msc_sentences = wordgraph.event_guided_multi_compress(lambd = 1.0, max_neighbors = 6, queue_size = 1024, sentence_count = 50)
+
+    for i in range(len(msc_sentences)):
+
+        print msc_sentences[i]
