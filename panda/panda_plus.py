@@ -154,7 +154,7 @@ class WordGraph:
         self.pos_separator = pos_separator
         """ The character (or string) used to separate a word and its Part of Speech tag """
 
-        # self.grammar_scorer = GrammarScorer(ngram_modelpath)
+        self.grammar_scorer = GrammarScorer(ngram_modelpath)
         """ language model scorer """
 
         self.graph = nx.DiGraph()
@@ -932,7 +932,7 @@ class WordGraph:
                 str_sentence += sentence[j][0].split(self.sep)[0] + ' '
 
             # 语言模型得分
-            fluency_weight = 1.0 # self.grammar_scorer.cal_fluency(str_sentence)
+            fluency_weight = self.grammar_scorer.cal_fluency(str_sentence) / len(re.split('\s+', str_sentence))
 
             # 依次计算每个句子的综合得分，并选择指定数目的句子进行封装返回
             sentences[i] = (len(sentence)/path_weight + lambd * fluency_weight, str_sentence.strip())
@@ -1007,10 +1007,10 @@ class WordGraph:
                     continue
 
                 # 计算当前结点与之前语句构成的新的语句的语言模型得分
-                fluency_weight = 1.0 # self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
+                fluency_weight = self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
 
                 # 计算当前后继结点的综合得分
-                neighbor_weight[pos_neighbor] = 1 / edge_weight + lambd * fluency_weight
+                neighbor_weight[pos_neighbor] = 1 / edge_weight + lambd * fluency_weight / (len(re.split('\s+', str_phrase)) + 1)
 
             # 将后继结点按综合得分由大到小进行排序
             sort_neighbor_weight = sorted(neighbor_weight.iteritems(), key=lambda neighbor_weight : neighbor_weight[1], reverse=True)
