@@ -6,12 +6,14 @@
 """
 
 import os
+import sys
 
 from common import *
-import panda.panda_plus as pp
+from language_model.grammar import GrammarScorer
+from panda.panda_plus import WordGraph
 
 
-def event_based_msc(sentences, output_sent_num = 50):
+def event_based_msc(sentences, grammar_scorer, lambd, max_neighbors, queue_size, output_sent_num = 50):
 
     """
     事件驱动的多语句压缩
@@ -22,39 +24,49 @@ def event_based_msc(sentences, output_sent_num = 50):
 
     # 构建词图，并执行压缩
     # 忽略词数小于8的句子
-    compresser = pp.WordGraph(sentences, ngram_modelpath=r'E:\nlp\Language Model\giga_3gram.lm', nb_words=8, lang='en', punct_tag="PUNCT")
+    compresser = WordGraph(sentences, grammar_scorer)
 
     # 获取压缩结果
-    candidates = compresser.multi_compress(output_sent_num)
+    candidates = compresser.event_guided_multi_compress(lambd, max_neighbors, queue_size, output_sent_num)
 
     # 将图保存成文本形式
     # compresser.write_dot('graph.dot')
 
-    # 对压缩结果进行归一化，并按得分由小到大排序
-    tmp = []
-    for score, path in candidates:
-        tmp.append((score / len(path), path))
-
-    # 依据得分进行排序
-    tmp = sorted(tmp, key = lambda tmp : tmp[0])
-
     # 封装结果返回
     results = []
-    for score, path in tmp:
-        results.append(str(round(score, 6)) + "#" + ' '.join([u[0] for u in path]) + '\n')
+    for score, sentence in candidates:
+        results.append(str(round(score, 6)) + "#" + sentence + '\n')
 
     return results
 
-
 if __name__ == '__main__':
 
+    if len(sys.argv) != 7:
+        print '参数错误'
+        sys.exit(-1)
+
     '''子句所在文件路径'''
-    sentences_dir = r'E:\nlp\experiment\event-guided-mts\sub-sentences'
+    sentences_dir = sys.argv[1]
 
     '''输出文件路径'''
-    save_dir = r'E:\nlp\experiment\event-guided-mts\msc_results'
+    save_dir = sys.argv[2]
 
-    '''事件指导的多语句压缩'''
+    ''' 语言模型所在路径 '''
+    ngram_modelpath = sys.argv[3]
+
+    ''' 路径得分和语言模型得分参数lambd '''
+    lambd = sys.argv[4]
+
+    ''' 最大后继邻接结点选择数 '''
+    max_neighbors = sys.argv[5]
+
+    ''' 队列容量 '''
+    queue_size = sys.argv[6]
+
+    # 初始化语言模型打分器
+    grammar_scorer = GrammarScorer(ngram_modelpath)
+
+    # 事件指导的多语句压缩
     for parent, dirs, files in os.walk(sentences_dir + "/weighted"):
 
         # 依次遍历每个主题文件
@@ -83,7 +95,7 @@ if __name__ == '__main__':
             for key in clusted_sentences:
                 # 执行多语句压缩
                 logging.info('[events]compressing, filename=%s, class=%s', filename, key)
-                event_based_results[key] = event_based_msc(clusted_sentences[key], 50)
+                event_based_results[key] = event_based_msc(clusted_sentences[key], grammar_scorer, lambd, max_neighbors, queue_size)
                 logging.info('[events]compress success, filename=%s, class=%s', filename, key)
 
             logging.info('Compress file[%s] finished!', filename)

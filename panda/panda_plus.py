@@ -104,7 +104,6 @@ import bisect
 import Queue
 import networkx as nx
 
-from language_model.grammar import GrammarScorer
 from common.logger import logging
 
 # 修改递归深度
@@ -128,7 +127,7 @@ class WordGraph:
       (default is PUNCT).
     """
 
-    def __init__(self, sentence_list, ngram_modelpath, nb_words=8, lang="en", punct_tag="PUNCT", pos_separator='/'):
+    def __init__(self, sentence_list, grammar_scorer, nb_words=8, lang="en", punct_tag="PUNCT", pos_separator='/'):
 
         self.sentence = list(sentence_list)
         """ A list of sentences provided by the user. """
@@ -154,7 +153,7 @@ class WordGraph:
         self.pos_separator = pos_separator
         """ The character (or string) used to separate a word and its Part of Speech tag """
 
-        self.grammar_scorer = GrammarScorer(ngram_modelpath)
+        self.grammar_scorer = grammar_scorer
         """ language model scorer """
 
         self.graph = nx.DiGraph()
