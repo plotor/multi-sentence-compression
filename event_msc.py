@@ -114,3 +114,5 @@ if __name__ == '__main__':
                     save_file.flush()
 
             logging.info('Save file[%s] success!', os.path.join(savepath, filename))
+
+    logging.info('program finish!')
