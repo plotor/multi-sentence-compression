@@ -716,7 +716,10 @@ class WordGraph:
             weight1 = self.term_weight[key]
         else:
             return 0.0
-        
+
+        if weight1 == 0.0:
+            return 0.0
+
         # Get the frequency of node2 in cluster
         # freq2 = self.graph.degree(node2)
         # freq2 = len(info2)
@@ -726,6 +729,9 @@ class WordGraph:
         if key in self.term_weight:
             weight2 = self.term_weight[key]
         else:
+            return 0.0
+
+        if weight2 == 0.0:
             return 0.0
 
         # 公式中的diff函数

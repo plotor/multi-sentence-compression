@@ -55,13 +55,13 @@ if __name__ == '__main__':
     ngram_modelpath = sys.argv[3]
 
     ''' 路径得分和语言模型得分参数lambd '''
-    lambd = sys.argv[4]
+    lambd = float(sys.argv[4])
 
     ''' 最大后继邻接结点选择数 '''
-    max_neighbors = sys.argv[5]
+    max_neighbors = int(sys.argv[5])
 
     ''' 队列容量 '''
-    queue_size = sys.argv[6]
+    queue_size = int(sys.argv[6])
 
     # 初始化语言模型打分器
     grammar_scorer = GrammarScorer(ngram_modelpath)
