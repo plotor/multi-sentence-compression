@@ -99,14 +99,11 @@ import sys
 import codecs
 import os
 import re
-import bisect
 import Queue
 import networkx as nx
 
 from common.logger import logging
 
-# 修改递归深度
-sys.setrecursionlimit(1000000)
 
 class WordGraph:
 
@@ -594,7 +591,7 @@ class WordGraph:
                         mapping[j] = (node, k)
 
             # -------------------------------------------------------------------
-            # 4. 添加边，通过为当前结点与其所有后继结点加边来解决边的稀疏性问题，确保无环
+            # 5. 添加边，通过为当前结点与其所有后继结点加边来解决边的稀疏性问题，确保无环
             # -------------------------------------------------------------------
             for pre in range(0, len(mapping) - 1):
 
@@ -716,7 +713,7 @@ class WordGraph:
         else:
             return 0.0
 
-        if weight1 == 0.0:
+        if weight1 == 0:
             return 0.0
 
         # Get the frequency of node2 in cluster
@@ -730,7 +727,7 @@ class WordGraph:
         else:
             return 0.0
 
-        if weight2 == 0.0:
+        if weight2 == 0:
             return 0.0
 
         # 公式中的diff函数
@@ -787,123 +784,6 @@ class WordGraph:
 
         return ((weight1 + weight2) / sum_diff) / (weight1 * weight2)
 
-    def k_shortest_paths(self, start, end, k=10):
-        """
-        Simple implementation of a k-shortest paths algorithms. Takes three
-        parameters: the starting node, the ending node and the number of 
-        shortest paths desired. Returns a list of k tuples (path, weight).
-        """
-
-        # Initialize the list of shortest paths
-        kshortestpaths = []
-
-        # Initializing the label container 
-        orderedX = []
-        orderedX.append((0, start, 0))
-        
-        # Initializing the path container
-        paths = {}
-        paths[(0, start, 0)] = [start]
-        
-        # Initialize the visited container
-        visited = {}
-        visited[start] = 0
-
-        # Initialize the sentence container that will be used to remove 
-        # duplicate sentences passing throught different nodes
-        sentence_container = {}
-    
-        # While the number of shortest paths isn't reached or all paths explored
-        while len(kshortestpaths) < k and len(orderedX) > 0:
-        
-            # Searching for the shortest distance in orderedX
-            shortest = orderedX.pop(0)
-            shortestpath = paths[shortest]
-            
-            # Removing the shortest node from X and paths
-            del paths[shortest]
-    
-            # Iterating over the accessible nodes
-            for node in self.graph.neighbors(shortest[1]):
-            
-                # To avoid loops
-                if node in shortestpath:
-                    continue
-            
-                # Compute the weight to node
-                w = shortest[0] + self.graph[shortest[1]][node]['weight']
-            
-                # If found the end, adds to k-shortest paths 
-                if node == end:
-
-                    # --- Constraints on the shortest paths
-
-                    # 1. Check if path contains at least one werb
-                    # 2. Check the length of the shortest path, without 
-                    #    considering punctuation marks and starting node (-1 in
-                    #    the range loop, because nodes are reversed)
-                    # 3. Check the paired parentheses and quotation marks
-                    # 4. Check if sentence is not redundant
-
-                    nb_verbs = 0
-                    length = 0
-                    paired_parentheses = 0
-                    quotation_mark_number = 0
-                    raw_sentence = ''
-
-                    for i in range(len(shortestpath) - 1):
-                        word, tag = shortestpath[i][0].split(self.sep)
-                        # 1.
-                        if tag in self.verbs:
-                            nb_verbs += 1
-                        # 2.
-                        if not re.search('(?u)^\W$', word):
-                            length += 1
-                        # 3.
-                        else:
-                            if word == '(':
-                                paired_parentheses -= 1
-                            elif word == ')':
-                                paired_parentheses += 1
-                            elif word == '"':
-                                quotation_mark_number += 1
-                        # 4.
-                        raw_sentence += word + ' '
-                    
-                    # Remove extra space from sentence
-                    raw_sentence = raw_sentence.strip()
-
-                    if nb_verbs >0 and \
-                        length >= self.nb_words and \
-                        paired_parentheses == 0 and \
-                        (quotation_mark_number%2) == 0 \
-                        and not sentence_container.has_key(raw_sentence):
-                        path = [node]
-                        path.extend(shortestpath)
-                        path.reverse()
-                        weight = float(w) #/ float(length)
-                        kshortestpaths.append((path, weight))
-                        sentence_container[raw_sentence] = 1
-
-                else:
-            
-                    # test if node has already been visited
-                    if visited.has_key(node):
-                        visited[node] += 1
-                    else:
-                        visited[node] = 0
-                    id = visited[node]
-
-                    # Add the node to orderedX
-                    bisect.insort(orderedX, (w, node, id))
-                    
-                    # Add the node to paths
-                    paths[(w, node, id)] = [node]
-                    paths[(w, node, id)].extend(shortestpath)
-    
-        # Returns the list of shortest paths
-        return kshortestpaths
-
     def event_guided_multi_compress(self, lambd, max_neighbors, queue_size, sentence_count):
 
         """
@@ -941,8 +821,8 @@ class WordGraph:
             # 依次计算每个句子的综合得分，并选择指定数目的句子进行封装返回
             sentences[i] = (len(sentence)/path_weight + lambd * fluency_weight, str_sentence.strip())
 
-        # 按照得分从大到小进行排序，并选择指定的数目进行返回
-        sentences.sort(lambda x,y:cmp(x[0],y[0]), reverse=True)
+        # 按照得分从大到小进行排序，并选择指定的数目进行返回（可以考虑堆排序提升性能）
+        sentences.sort(lambda x, y : cmp(x[0], y[0]), reverse=True)
 
         return sentences[0: sentence_count]
 
@@ -1016,39 +896,20 @@ class WordGraph:
                 # 计算当前后继结点的综合得分
                 neighbor_weight[pos_neighbor] = 1 / edge_weight + lambd * fluency_weight / (len(re.split('\s+', str_phrase)) + 1)
 
-            # 将后继结点按综合得分由大到小进行排序
+            # 将后继结点按综合得分由大到小进行排序（可以考虑改成推排序来提升性能）
             sort_neighbor_weight = sorted(neighbor_weight.iteritems(), key=lambda neighbor_weight : neighbor_weight[1], reverse=True)
 
             # 选择指定数目的结点如队列
             for i in range(min(max_neighbors, len(sort_neighbor_weight))):
 
+                if queue.full():
+                    break
+
                 # 综合得分最高的max_neighbors个邻接后继结点如队列
                 new_phrase = phrase + [sort_neighbor_weight[i][0]]
                 queue.put(new_phrase)
 
-                if queue.full():
-                    break
-
         return results
-
-    def max_index(self, l):
-
-        """ 返回给的列表中最大元素的下标 """
-
-        ll = len(l)
-        if ll < 0:
-            return None
-        elif ll == 1:
-            return 0
-
-        max_val = l[0]
-        max_ind = 0
-        for z in range(1, ll):
-            if l[z] > max_val:
-                max_val = l[z]
-                max_ind = z
-
-        return max_ind
 
     def load_stopwords(self, path):
         """
