@@ -7,6 +7,7 @@
 
 import os
 import sys
+import ConfigParser
 
 from common import *
 from language_model.grammar import GrammarScorer
@@ -41,29 +42,35 @@ def event_based_msc(sentences, grammar_scorer, lambd, max_neighbors, queue_size,
 
 if __name__ == '__main__':
 
-    if len(sys.argv) != 7:
-        print '参数错误'
+    if len(sys.argv) != 2:
+        logging.error('param error: please set the config filename!')
         sys.exit(-1)
 
+    cfg_filename = sys.argv[1]
+    logging.info('loading setting file[%s]', cfg_filename)
+    cf = ConfigParser.ConfigParser()
+    cf.read(cfg_filename)
+
     '''子句所在文件路径'''
-    sentences_dir = sys.argv[1]
+    sentences_dir = cf.get('emsc', 'sentences_dir')
 
     '''输出文件路径'''
-    save_dir = sys.argv[2]
+    save_dir = cf.get('emsc', 'save_dir')
 
     ''' 语言模型所在路径 '''
-    ngram_modelpath = sys.argv[3]
+    ngram_modelpath = cf.get('emsc', 'ngram_model_path')
 
     ''' 路径得分和语言模型得分参数lambd '''
-    lambd = float(sys.argv[4])
+    lambd = cf.getfloat('emsc', 'lambd')
 
     ''' 最大后继邻接结点选择数 '''
-    max_neighbors = int(sys.argv[5])
+    max_neighbors = cf.getint('emsc', 'max_neighbors')
 
     ''' 队列容量 '''
-    queue_size = int(sys.argv[6])
+    queue_size = cf.getint('emsc', 'queue_size')
 
     # 初始化语言模型打分器
+    logging.info('Initializing ngram model[%s]', ngram_modelpath)
     grammar_scorer = GrammarScorer(ngram_modelpath)
 
     # 事件指导的多语句压缩

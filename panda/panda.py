@@ -724,10 +724,7 @@ class word_graph:
 
         return ((weight1 + weight2) / sum(diff)) / (weight1 * weight2)
         #return ( (freq1 + freq2) / sum(diff) ) / (weight1 * weight2)
-    #-B-----------------------------------------------------------------------B-
 
-
-    #-T-----------------------------------------------------------------------T-
     def k_shortest_paths(self, start, end, k=10):
         """
         Simple implementation of a k-shortest paths algorithms. Takes three
@@ -735,18 +732,18 @@ class word_graph:
         shortest paths desired. Returns a list of k tuples (path, weight).
         """
 
-        # Initialize the list of shortest paths
+        # 存放K条最短路径
         kshortestpaths = []
 
-        # Initializing the label container
+        # 初始化label容器
         orderedX = []
         orderedX.append((0, start, 0))
 
-        # Initializing the path container
+        # 初始化path容器
         paths = {}
         paths[(0, start, 0)] = [start]
 
-        # Initialize the visited container
+        # 初始化visited容器
         visited = {}
         visited[start] = 0
 
@@ -777,7 +774,6 @@ class word_graph:
                 # If found the end, adds to k-shortest paths
                 if node == end:
 
-                    #-T-------------------------------------------------------T-
                     # --- Constraints on the shortest paths
 
                     # 1. Check if path contains at least one werb
@@ -827,8 +823,6 @@ class word_graph:
                         kshortestpaths.append((path, weight))
                         sentence_container[raw_sentence] = 1
 
-                    #-B-------------------------------------------------------B-
-
                 else:
 
                     # test if node has already been visited
@@ -838,7 +832,7 @@ class word_graph:
                         visited[node] = 0
                     id = visited[node]
 
-                    # Add the node to orderedX
+                    # 有序插入
                     bisect.insort(orderedX, (w, node, id))
 
                     # Add the node to paths

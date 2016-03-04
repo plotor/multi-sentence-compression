@@ -95,7 +95,6 @@
     November 20, 1948. (Wikipedia, http://en.wikipedia.org/wiki/takahe)  
 """
 
-import sys
 import codecs
 import os
 import re
@@ -785,16 +784,15 @@ class WordGraph:
         return ((weight1 + weight2) / sum_diff) / (weight1 * weight2)
 
     def event_guided_multi_compress(self, lambd, max_neighbors, queue_size, sentence_count):
-
         """
         基于事件指导的多语句压缩
         利用图的广度优先搜索来得到路径，搜索过程中考虑如下因素：
         1.路径得分
         2.语言模型得分
-
         :return:
         """
 
+        # 进行剪枝广度搜索
         sentences = self.__pruning_bfs(lambd, max_neighbors, queue_size)
 
         # 计算句子的综合得分
@@ -827,7 +825,6 @@ class WordGraph:
         return sentences[0: sentence_count]
 
     def __pruning_bfs(self, lambd, max_neighbors, queue_size):
-
         """
         剪枝广度优先搜素
         :param lambd:
@@ -838,15 +835,12 @@ class WordGraph:
 
         # 存放搜索到的路径
         results = []
-
         # 起始结点
         start = (self.start + self.sep + self.start, 0)
-
         # 终止结点
         stop = (self.stop + self.sep + self.stop, 0)
 
         queue = Queue.Queue(queue_size)
-
         # 起始结点入栈
         queue.put([start])
 
@@ -859,42 +853,40 @@ class WordGraph:
             node = phrase[len(phrase) - 1]
 
             if stop == node:
-
                 # 已经是最后一个结点
                 if len(phrase) >= 8:
                     # 只选择长度在8个单词以上的句子
                     results.append(phrase)
-
                 continue
 
             # 将当前短语转换成字符串形式
             str_phrase = ''
-
             for nodeflag, num in phrase:
                 str_phrase += nodeflag.split(self.sep)[0] + ' '
 
-            logging.info('results(' + str(len(results)) + ') queue(' + str(queue.qsize()) + ') -- ' + str_phrase)
+            logging.info('results size[%d] queue size[%d] phrase[%s]', len(results), queue.qsize(), str_phrase)
 
             # 获取当前结点的邻接后继结点
             pos_neighbors = self.graph.neighbors(node)
-
             # 每个后继结点的综合得分（考虑路径得分和语言模型得分）
             neighbor_weight = {}
-
             # 依次处理每个后继结点
             for pos_neighbor in pos_neighbors:
-
-                # 获取两个结点之间边的权重（越小越好）
+                # 获取两个结点之间边的权重
                 edge_weight = self.graph.get_edge_data(node, pos_neighbor)['weight']
-
                 if edge_weight == 0:
                     continue
 
                 # 计算当前结点与之前语句构成的新的语句的语言模型得分
                 fluency_weight = self.grammar_scorer.cal_fluency(str_phrase + pos_neighbor[0].split(self.sep)[0])
 
+                # 计算综合得分
+                general_score = 1 / edge_weight + lambd * fluency_weight / (len(re.split('\s+', str_phrase)) + 1)
+
+                logging.info("lambd[%f] general score[%f] edge weight[%f] fluency weight[%f]", lambd, general_score, edge_weight, fluency_weight)
+
                 # 计算当前后继结点的综合得分
-                neighbor_weight[pos_neighbor] = 1 / edge_weight + lambd * fluency_weight / (len(re.split('\s+', str_phrase)) + 1)
+                neighbor_weight[pos_neighbor] = general_score
 
             # 将后继结点按综合得分由大到小进行排序（可以考虑改成推排序来提升性能）
             sort_neighbor_weight = sorted(neighbor_weight.iteritems(), key=lambda neighbor_weight : neighbor_weight[1], reverse=True)
