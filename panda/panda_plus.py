@@ -923,3 +923,21 @@ class WordGraph:
     def write_dot(self, dotfile):
         """ Outputs the word graph in dot format in the specified file. """
         nx.write_dot(self.graph, dotfile)
+
+    def max_index(self, l):
+        """ 返回给的列表中最大元素的下标 """
+
+        ll = len(l)
+        if ll < 0:
+            return None
+        elif ll == 1:
+            return 0
+
+        max_val = l[0]
+        max_ind = 0
+        for z in range(1, ll):
+            if l[z] > max_val:
+                max_val = l[z]
+                max_ind = z
+
+        return max_ind
