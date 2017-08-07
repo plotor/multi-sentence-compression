@@ -3,7 +3,7 @@
 
 """
 :Name:
-    panda_plus
+    word graph
 
 :Authors:
     Zhenchao Wang
@@ -14,85 +14,13 @@
 :Date:
     2015-11-19
 
-:Description:
-    panda_plus is a multi-sentence compression module. Given a set of redundant
-    sentences, a word-graph is constructed by iteratively adding sentences to 
-    it. The best compression is obtained by finding the shortest path in the
-    word graph. The original algorithm was published and described in
-    [filippova:2010:COLING]_. A keyphrase-based reranking method, described in
-    [boudin-morin:2013:NAACL]_ can be applied to generate more informative 
-    compressions.
-
-    .. [filippova:2010:COLING] Katja Filippova, Multi-Sentence Compression: 
-       Finding Shortest Paths in Word Graphs, *Proceedings of the 23rd 
-       International Conference on Computational Linguistics (Coling 2010)*, 
-       pages 322-330, 2010.
-    .. [boudin-morin:2013:NAACL] Florian Boudin and Emmanuel Morin, Keyphrase 
-       Extraction for N-best Reranking in Multi-Sentence Compression, 
-       *Proceedings of the 2013 Conference of the North American Chapter of the
-       Association for Computational Linguistics: Human Language Technologies 
-       (NAACL-HLT 2013)*, 2013.
-
-
 :History:
-    Development history of the panda module:
+    Development history of the core module:
         - 0.1 (2015-11-19), first version
 
 :Dependencies:
     The following Python modules are required:
-        - `networkx <http://networkx.github.com/>`_ for the graph construction
-          (v1.2+)
-
-:Usage:
-    A typical usage of this module is::
-    
-        import panda
-        
-        # A list of tokenized and POS-tagged sentences
-        sentences = ['Hillary/NNP Clinton/NNP wanted/VBD to/stop visit/VB ...']
-        
-        # Create a word graph from the set of sentences with parameters :
-        # - minimal number of words in the compression : 6
-        # - language of the input sentences : en (english)
-        # - POS tag for punctuation marks : PUNCT
-        compresser = takahe.word_graph( sentences, 
-                                        nb_words = 6, 
-                                        lang = 'en', 
-                                        punct_tag = "PUNCT" )
-
-        # Get the 50 best paths
-        candidates = compresser.get_compression(50)
-
-        # 1. Rerank compressions by path length (Filippova's method)
-        for cummulative_score, path in candidates:
-
-            # Normalize path score by path length
-            normalized_score = cummulative_score / len(path)
-
-            # Print normalized score and compression
-            print round(normalized_score, 3), ' '.join([u[0] for u in path])
-
-        # Write the word graph in the dot format
-        compresser.write_dot('test.dot')
-
-        # 2. Rerank compressions by keyphrases (Boudin and Morin's method)
-        reranker = takahe.keyphrase_reranker( sentences,  
-                                              candidates, 
-                                              lang = 'en' )
-
-        reranked_candidates = reranker.rerank_nbest_compressions()
-
-        # Loop over the best reranked candidates
-        for score, path in reranked_candidates:
-            
-            # Print the best reranked candidates
-            print round(score, 3), ' '.join([u[0] for u in path])
-
-:Misc:
-    The Takahe is a flightless bird indigenous to New Zealand. It was thought to
-    be extinct after the last four known specimens were taken in 1898. However, 
-    after a carefully planned search effort the bird was rediscovered by on 
-    November 20, 1948. (Wikipedia, http://en.wikipedia.org/wiki/takahe)  
+        - `networkx <http://networkx.github.com/>`_ for the graph construction(v1.2+)
 """
 
 import codecs
@@ -107,7 +35,7 @@ from common.logger import logging
 class WordGraph:
 
     """
-    The word_graph class constructs a word graph from the set of sentences given
+    The WordGraph class constructs a word graph from the set of sentences given
     as input. The set of sentences is a list of strings, sentences are tokenized
     and words are POS-tagged (e.g. ``"Saturn/NNP is/VBZ the/DT sixth/JJ 
     planet/NN from/IN the/DT Sun/NNP in/IN the/DT Solar/NNP System/NNP"``). 
