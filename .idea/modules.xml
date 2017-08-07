@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/MultiSentencesCompression.iml" filepath="$PROJECT_DIR$/.idea/MultiSentencesCompression.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/multi-sentence-compression.iml" filepath="$PROJECT_DIR$/.idea/multi-sentence-compression.iml" />
     </modules>
   </component>
 </project>
