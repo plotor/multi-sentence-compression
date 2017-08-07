@@ -1,8 +1,7 @@
 #! /usr/bin/python
 # -*- coding: utf-8 -*-
 
-from panda.panda_plus import WordGraph
-from takahe.takahe import word_graph
+from core.coati_v2 import WordGraph
 
 if __name__ == '__main__':
 
@@ -21,7 +20,7 @@ if __name__ == '__main__':
 
 
     # 采用原生多语句压缩
-    wordgraph = word_graph(sentences)
+    wordgraph = WordGraph(sentences)
     msc_sentences = wordgraph.get_compression()
     for i in range(len(msc_sentences)):
         print msc_sentences[i]

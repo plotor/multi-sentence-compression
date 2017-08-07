@@ -10,8 +10,8 @@ import sys
 import ConfigParser
 
 from common import *
-from language_model.grammar import GrammarScorer
-from panda.panda_plus import WordGraph
+from common.grammar import GrammarScorer
+from core.coati_v2 import WordGraph
 
 
 def event_based_msc(sentences, grammar_scorer, lambd, max_neighbors, queue_size, output_sent_num = 50):
