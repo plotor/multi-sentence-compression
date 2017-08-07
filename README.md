@@ -25,4 +25,6 @@
 
 其中 pos(s, i) 表示词 i 在句子 s 中的水平位移。
 
-[takahe](https://github.com/boudinfl/takahe) 对原论文中的方法进行了实现，而本项目是在 takahe 的基础上进行了改进，具体使用方式和依赖库可以参考 takahe，在这里感谢原作者。
+语句的路径得分由路径上所有边的权重之和除以路径长度计算得到。原压缩方法中将这 K 条语句作为压缩的最终输出，这里的实现引入了 Tri-gram 语言模型为每个压缩候选语句进行打分，以此反应语句的语言流畅度。
+
+[takahe](https://github.com/boudinfl/takahe) 对原论文中的方法进行了实现，而本项目是在 takahe 的基础上进行了改进，具体使用方式和依赖库可以参考 takahe，在这里对 takahe 作者表示感谢。
