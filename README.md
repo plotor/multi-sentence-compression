@@ -2,6 +2,8 @@
 
 This project is the realization of multi-sentence compression. It’s a process based on the word graph, compressing multiple sentences which have the similar description and topic, and generate the sentence with the main topic and information.
 
+[![AUR](https://img.shields.io/aur/license/yaourt.svg)](https://github.com/procyon-lotor/multi-sentence-compression/blob/master/LICENSE)
+
 The specific algorithm thinking can refer the below two papers:
 
 1. [Multi-sentence compression: finding shortest paths in word graphs](http://dl.acm.org/citation.cfm?id=1873818)
