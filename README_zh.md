@@ -13,15 +13,15 @@
 > - 如果当前句子中的词在图中已有映射结点，即图中某个词与当前词具有相同的词形和词性，那么直接将该词映射到该结点；
 > - 如果当前句子中的词在图中没有相应的映射结点， 则创建一个新的结点。
 
-![image](https://github.com/procyon-lotor/procyon-lotor.github.io/blob/master/img/2017/wordgraph.png?raw=false)
+![image](https://github.com/procyon-lotor/procyon-lotor.github.io/blob/master/images/2017/wordgraph.png?raw=false)
 
 在计算词图边的权重方面，该方法仅考虑词频因素，个人觉得这样的设计有些单薄，仅考虑词频因素往往会引入较多的噪声，导致生成的句子丢失主干信息，这里的实现考虑事件（可以简单理解为 “主-谓-宾” 词组）因素来计算词图边的权重。我们首先利用事件聚类的结果，将当前事件与聚类中心的距离作为事件的权重， 然后利用下面的公式计算词图中每个词的权重：
 
-![image](https://github.com/procyon-lotor/procyon-lotor.github.io/blob/master/img/2017/msc_1.png?raw=false)
+![image](https://github.com/procyon-lotor/procyon-lotor.github.io/blob/master/images/2017/msc_1.png?raw=false)
 
 其中，dis(i, e) 表示词 i 与事件 e 的余弦距离， w(e) 表示事件的权重， size(E) 表示当前主题的大小。如果某个结点对应的词在一个或多个句子中出现多次，则将其权重进行累加。在边的权重 w(i, j) 计算上，我们考虑当前边所连接的词 i 和 j 的权重， 按照如下公式进行计算：
 
-![image](https://github.com/procyon-lotor/procyon-lotor.github.io/blob/master/img/2017/msc_2.png?raw=false)
+![image](https://github.com/procyon-lotor/procyon-lotor.github.io/blob/master/images/2017/msc_2.png?raw=false)
 
 其中 pos(s, i) 表示词 i 在句子 s 中的水平位移。
 
